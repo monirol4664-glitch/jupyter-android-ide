@@ -1,5 +1,4 @@
 [app]
-
 title = Python Console
 package.name = pythonconsole
 package.domain = org.pythonapp
@@ -17,6 +16,5 @@ android.permissions = WRITE_EXTERNAL_STORAGE
 android.debug = True
 
 [buildozer]
-
 log_level = 2
 warn_on_root = 1
