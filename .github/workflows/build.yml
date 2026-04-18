@@ -1,0 +1,38 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+    
+    - name: Install Android Workload
+      run: dotnet workload install android
+    
+    - name: Create Project
+      run: dotnet new android -n MathematicaConsole
+    
+    - name: Replace Program.cs
+      run: cp Program.cs MathematicaConsole/Program.cs
+    
+    - name: Build APK
+      run: |
+        cd MathematicaConsole
+        dotnet build -c Release -f net8.0-android
+    
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-debug.apk
+        path: MathematicaConsole/bin/Release/net8.0-android/*.apk
