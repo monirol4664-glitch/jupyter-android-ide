@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest  # Changed from windows-latest (better for MAUI)
+    runs-on: ubuntu-latest
     
     steps:
     - uses: actions/checkout@v4
@@ -15,7 +15,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v3
       with:
-        dotnet-version: 8.0.x
+        dotnet-version: 9.0.x
     
     - name: Install MAUI workload
       run: |
@@ -31,15 +31,16 @@ jobs:
       run: dotnet restore
     
     - name: Build Android APK
-      run: dotnet build -c Release -f net8.0-android --no-restore
+      run: dotnet build -c Release -f net9.0-android --no-restore
     
     - name: Publish APK
-      run: dotnet publish -f net8.0-android -c Release --no-build -o output
+      run: dotnet publish -f net9.0-android -c Release --no-build -o output
     
-    - name: Find and rename APK
+    - name: Find APK
       run: |
-        find . -name "*.apk" -exec cp {} aperture4.apk \;
-        ls -la *.apk 2>/dev/null || echo "APK not found"
+        find . -name "*.apk" -exec cp {} aperture4.apk \; 2>/dev/null || echo "Searching..."
+        ls -la output/ || echo "Checking output..."
+        ls -la **/*.apk || echo "No APK found"
     
     - name: Upload APK
       uses: actions/upload-artifact@v4
