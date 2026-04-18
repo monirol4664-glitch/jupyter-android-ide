@@ -1,4 +1,4 @@
-name: Build with .NET 9
+name: Build Mathematica Console APK
 
 on: [push, workflow_dispatch]
 
@@ -17,25 +17,25 @@ jobs:
     - name: Install Android Workload
       run: dotnet workload install android
     
-    - name: Create and Build APK
+    - name: Create and Build App
       run: |
         dotnet new android -n MathematicaConsole
         cd MathematicaConsole
         
-        # Update to .NET 9
-        sed -i 's/net[0-9.]*-android/net9.0-android35/' MathematicaConsole.csproj
+        # Replace with our MainActivity
+        cat > MainActivity.cs << 'EOF'
+        [Copy the ENTIRE MainActivity.cs code above here]
+        EOF
         
-        # THIS creates the APK (not just build)
-        dotnet publish -c Release -f net9.0-android35 /p:AndroidPackageFormat=apk
+        # Update project file
+        sed -i 's/<TargetFramework>.*<\/TargetFramework>/<TargetFramework>net9.0-android35<\/TargetFramework>/' MathematicaConsole.csproj
+        sed -i 's/<\/PropertyGroup>/  <AndroidPackageFormat>apk<\/AndroidPackageFormat>\n<\/PropertyGroup>/' MathematicaConsole.csproj
         
-        # Find where the APK is
-        find . -name "*.apk"
+        # Build
+        dotnet publish -c Release -f net9.0-android35
         
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: MathematicaConsole.apk
-        path: |
-          **/bin/Release/net9.0-android35/*.apk
-          **/publish/*.apk
-          **/*.apk
+        path: MathematicaConsole/bin/Release/net9.0-android35/*.apk
