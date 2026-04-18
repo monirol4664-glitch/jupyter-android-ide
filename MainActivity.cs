@@ -13,9 +13,9 @@ namespace MathematicaConsole;
 [Activity(Label = "Mathematica Console", MainLauncher = true)]
 public class MainActivity : Activity
 {
-    private EditText inputField;
-    private TextView outputArea;
-    private LinearLayout layout;
+    private EditText? inputField;
+    private TextView? outputArea;
+    private LinearLayout? layout;
     private int counter = 1;
     private List<string> history = new List<string>();
     private int historyIndex = 0;
@@ -24,27 +24,21 @@ public class MainActivity : Activity
     {
         base.OnCreate(savedInstanceState);
         
-        layout = new LinearLayout(this)
-        {
-            Orientation = Orientation.Vertical,
-            SetBackgroundColor = Color.ParseColor("#1e1e1e")
-        };
+        layout = new LinearLayout(this);
+        layout.Orientation = Orientation.Vertical;
+        layout.SetBackgroundColor(Color.ParseColor("#1e1e1e"));
         
-        var title = new TextView(this)
-        {
-            Text = "Mathematica Console",
-            TextSize = 24,
-            Gravity = GravityFlags.Center,
-            SetBackgroundColor = Color.ParseColor("#2d2d2d")
-        };
+        var title = new TextView(this);
+        title.Text = "Mathematica Console";
+        title.TextSize = 24;
+        title.Gravity = GravityFlags.Center;
+        title.SetBackgroundColor(Color.ParseColor("#2d2d2d"));
         title.SetTextColor(Color.ParseColor("#4ec9b0"));
         title.SetPadding(0, 30, 0, 30);
         
-        outputArea = new TextView(this)
-        {
-            TextSize = 16,
-            Typeface = Typeface.Create("monospace", TypefaceStyle.Normal)
-        };
+        outputArea = new TextView(this);
+        outputArea.TextSize = 16;
+        outputArea.SetTypeface(Typeface.Create("monospace", TypefaceStyle.Normal), TypefaceStyle.Normal);
         outputArea.SetTextColor(Color.White);
         outputArea.SetPadding(30, 30, 30, 30);
         
@@ -52,37 +46,32 @@ public class MainActivity : Activity
         outputArea.Text += "    Mathematica Console v1.0\n";
         outputArea.Text += "========================================\n\n";
         outputArea.Text += "Examples:\n";
-        outputArea.Text += "  2 + 2\n";
-        outputArea.Text += "  10 / 3\n";
-        outputArea.Text += "  (5+3)*2\n";
-        outputArea.Text += "  2^3\n";
-        outputArea.Text += "  Sin[30]\n";
-        outputArea.Text += "  Sqrt[16]\n";
-        outputArea.Text += "  Log[100]\n\n";
+        outputArea.Text += "  2 + 2 = 4\n";
+        outputArea.Text += "  10 / 3 = 3.333\n";
+        outputArea.Text += "  (5+3)*2 = 16\n";
+        outputArea.Text += "  2^3 = 8\n";
+        outputArea.Text += "  Sin[30] = 0.5\n";
+        outputArea.Text += "  Sqrt[16] = 4\n";
+        outputArea.Text += "  Log[100] = 2\n\n";
+        outputArea.Text += "Type any math expression below!\n";
         outputArea.Text += "========================================\n";
         
-        var inputLayout = new LinearLayout(this)
-        {
-            Orientation = Orientation.Horizontal,
-            SetBackgroundColor = Color.ParseColor("#252526")
-        };
+        var inputLayout = new LinearLayout(this);
+        inputLayout.Orientation = Orientation.Horizontal;
+        inputLayout.SetBackgroundColor(Color.ParseColor("#252526"));
         inputLayout.SetPadding(20, 20, 20, 20);
         
-        var prompt = new TextView(this)
-        {
-            Text = $"[{counter}]> ",
-            TextSize = 16,
-            Typeface = Typeface.Create("monospace", TypefaceStyle.Bold)
-        };
+        var prompt = new TextView(this);
+        prompt.Text = $"[{counter}]> ";
+        prompt.TextSize = 16;
+        prompt.SetTypeface(Typeface.Create("monospace", TypefaceStyle.Bold), TypefaceStyle.Bold);
         prompt.SetTextColor(Color.ParseColor("#4ec9b0"));
         
-        inputField = new EditText(this)
-        {
-            TextSize = 16,
-            Hint = "Enter expression...",
-            Typeface = Typeface.Create("monospace", TypefaceStyle.Normal),
-            LayoutParameters = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WrapContent, 1)
-        };
+        inputField = new EditText(this);
+        inputField.TextSize = 16;
+        inputField.Hint = "Enter expression...";
+        inputField.SetTypeface(Typeface.Create("monospace", TypefaceStyle.Normal), TypefaceStyle.Normal);
+        inputField.LayoutParameters = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WrapContent, 1);
         inputField.SetTextColor(Color.ParseColor("#d4d4d4"));
         inputField.SetHintTextColor(Color.ParseColor("#6a6a6a"));
         inputField.SetBackgroundColor(Color.Transparent);
@@ -112,11 +101,9 @@ public class MainActivity : Activity
             }
         };
         
-        var button = new Button(this)
-        {
-            Text = "=",
-            SetBackgroundColor = Color.ParseColor("#0e639c")
-        };
+        var button = new Button(this);
+        button.Text = "=";
+        button.SetBackgroundColor(Color.ParseColor("#0e639c"));
         button.SetTextColor(Color.White);
         button.Click += (s, e) => Evaluate();
         
@@ -135,6 +122,8 @@ public class MainActivity : Activity
     
     private void Evaluate()
     {
+        if (inputField == null || outputArea == null) return;
+        
         string input = inputField.Text?.Trim() ?? "";
         if (string.IsNullOrEmpty(input)) return;
         
@@ -176,14 +165,14 @@ public class MainActivity : Activity
             {
                 double val = double.Parse(trigMatch.Groups[2].Value);
                 double rad = val * Math.PI / 180;
-                double result = trigMatch.Groups[1].Value.ToLower() switch
+                double trigResult = trigMatch.Groups[1].Value.ToLower() switch
                 {
                     "sin" => Math.Sin(rad),
                     "cos" => Math.Cos(rad),
                     "tan" => Math.Tan(rad),
                     _ => 0
                 };
-                return $"{trigMatch.Groups[1].Value}({val}°) = {result:F6}";
+                return $"{trigMatch.Groups[1].Value}({val}°) = {trigResult:F6}";
             }
             
             // Sqrt
@@ -200,101 +189,6 @@ public class MainActivity : Activity
             {
                 double val = double.Parse(logMatch.Groups[1].Value);
                 return $"log({val}) = {Math.Log10(val):F6}";
-            }
-            
-            // Integrate
-            var intMatch = Regex.Match(expr, @"Integrate\[(.+),\s*(\w+)\]", RegexOptions.IgnoreCase);
-            if (intMatch.Success)
-            {
-                string func = intMatch.Groups[1].Value;
-                return func switch
-                {
-                    "x^2" => "∫ x² dx = x³/3 + C",
-                    "x" => "∫ x dx = x²/2 + C",
-                    "Sin[x]" => "∫ sin(x) dx = -cos(x) + C",
-                    "Cos[x]" => "∫ cos(x) dx = sin(x) + C",
-                    "1/x" => "∫ 1/x dx = ln|x| + C",
-                    "E^x" => "∫ eˣ dx = eˣ + C",
-                    _ => $"∫ {func} dx = [Symbolic result not available]"
-                };
-            }
-            
-            // Derivative
-            var diffMatch = Regex.Match(expr, @"D\[(.+),\s*(\w+)\]", RegexOptions.IgnoreCase);
-            if (diffMatch.Success)
-            {
-                string func = diffMatch.Groups[1].Value;
-                return func switch
-                {
-                    "x^3" => "d/dx (x³) = 3x²",
-                    "x^2" => "d/dx (x²) = 2x",
-                    "Sin[x]" => "d/dx sin(x) = cos(x)",
-                    "Cos[x]" => "d/dx cos(x) = -sin(x)",
-                    "E^x" => "d/dx (eˣ) = eˣ",
-                    "Log[x]" => "d/dx ln(x) = 1/x",
-                    _ => $"d/dx ({func}) = [Derivative not available]"
-                };
-            }
-            
-            // Expand
-            var expMatch = Regex.Match(expr, @"Expand\[(.+)\]", RegexOptions.IgnoreCase);
-            if (expMatch.Success)
-            {
-                string func = expMatch.Groups[1].Value;
-                return func switch
-                {
-                    "(x+1)^2" => "(x+1)² expands to x² + 2x + 1",
-                    "(x-1)^3" => "(x-1)³ expands to x³ - 3x² + 3x - 1",
-                    "(x+2)(x+3)" => "(x+2)(x+3) expands to x² + 5x + 6",
-                    _ => $"{func} = [Expansion not implemented]"
-                };
-            }
-            
-            // Factor
-            var facMatch = Regex.Match(expr, @"Factor\[(.+)\]", RegexOptions.IgnoreCase);
-            if (facMatch.Success)
-            {
-                string func = facMatch.Groups[1].Value;
-                return func switch
-                {
-                    "x^2+2x+1" => "x² + 2x + 1 factors to (x+1)²",
-                    "x^2-1" => "x² - 1 factors to (x-1)(x+1)",
-                    "x^2+5x+6" => "x² + 5x + 6 factors to (x+2)(x+3)",
-                    _ => $"{func} = [Prime or cannot factor]"
-                };
-            }
-            
-            // Simplify
-            var simMatch = Regex.Match(expr, @"Simplify\[(.+)\]", RegexOptions.IgnoreCase);
-            if (simMatch.Success)
-            {
-                string func = simMatch.Groups[1].Value;
-                return func switch
-                {
-                    "Sin[x]^2+Cos[x]^2" => "sin²(x) + cos²(x) simplifies to 1",
-                    "x+x" => "x + x simplifies to 2x",
-                    "x*x" => "x * x simplifies to x²",
-                    _ => $"{func} = [Cannot simplify further]"
-                };
-            }
-            
-            // MatrixForm
-            var matMatch = Regex.Match(expr, @"MatrixForm\[{{(.+),(.+)},{(.+),(.+)}}\]", RegexOptions.IgnoreCase);
-            if (matMatch.Success)
-            {
-                return $"┌ {matMatch.Groups[1].Value}  {matMatch.Groups[2].Value} ┐\n└ {matMatch.Groups[3].Value}  {matMatch.Groups[4].Value} ┘";
-            }
-            
-            // Determinant
-            var detMatch = Regex.Match(expr, @"Det\[{{(.+),(.+)},{(.+),(.+)}}\]", RegexOptions.IgnoreCase);
-            if (detMatch.Success)
-            {
-                double a = double.Parse(detMatch.Groups[1].Value);
-                double b = double.Parse(detMatch.Groups[2].Value);
-                double c = double.Parse(detMatch.Groups[3].Value);
-                double d = double.Parse(detMatch.Groups[4].Value);
-                double det = a * d - b * c;
-                return $"det = {det}";
             }
             
             // Default
@@ -316,13 +210,13 @@ public class MainActivity : Activity
             {
                 double baseNum = double.Parse(match.Groups[1].Value);
                 double exponent = double.Parse(match.Groups[2].Value);
-                double result = Math.Pow(baseNum, exponent);
-                expr = expr.Replace(match.Value, result.ToString());
+                double powResult = Math.Pow(baseNum, exponent);
+                expr = expr.Replace(match.Value, powResult.ToString());
             }
             
             var table = new DataTable();
-            var result = table.Compute(expr, "");
-            return $"{expr} = {result}";
+            var evalResult = table.Compute(expr, "");
+            return $"{expr} = {evalResult}";
         }
         catch
         {
