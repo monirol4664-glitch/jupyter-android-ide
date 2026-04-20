@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="MathToolsApp.MainPage"
+             Title="Math Tools">
+    
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        
+        <Label Grid.Row="0" 
+               Text="🧮 Math Tools Pro" 
+               FontSize="28" 
+               FontAttributes="Bold"
+               HorizontalOptions="Center"
+               Padding="20"/>
+        
+        <CollectionView Grid.Row="1" 
+                        x:Name="ToolsCollection"
+                        ItemsLayout="VerticalGrid"
+                        ItemSizingStrategy="MeasureFirstItem">
+            <CollectionView.ItemsLayout>
+                <GridItemsLayout Orientation="Vertical" Span="2"/>
+            </CollectionView.ItemsLayout>
+            
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Frame CornerRadius="15" 
+                           Margin="10"
+                           Padding="15"
+                           BackgroundColor="White">
+                        <VerticalStackLayout>
+                            <Label Text="{Binding Icon}" 
+                                   FontSize="40"
+                                   HorizontalOptions="Center"/>
+                            <Label Text="{Binding Name}" 
+                                   FontSize="16" 
+                                   FontAttributes="Bold"
+                                   HorizontalOptions="Center"/>
+                            <Label Text="{Binding Description}" 
+                                   FontSize="12" 
+                                   TextColor="Gray"
+                                   HorizontalOptions="Center"
+                                   LineBreakMode="WordWrap"/>
+                        </VerticalStackLayout>
+                    </Frame>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+    </Grid>
+</ContentPage>
