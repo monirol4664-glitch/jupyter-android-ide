@@ -16,7 +16,6 @@ public static class MauiProgram
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
                 fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
             });
-
         return builder.Build();
     }
 }
@@ -25,6 +24,6 @@ public class App : Application
 {
     protected override Window CreateWindow(IActivationState? activationState)
     {
-        return new Window(new NavigationPage(new MainPage()));
+        return new Window(new MainPage());
     }
 }
