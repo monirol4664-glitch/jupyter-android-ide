@@ -2,97 +2,32 @@ name: Build Math Tools APK
 
 on:
   push:
-    branches: [ main, master, develop ]
-    tags:
-      - 'v*'
-  pull_request:
     branches: [ main, master ]
-  workflow_dispatch:  # Allows manual trigger
+  workflow_dispatch:
 
 jobs:
-  build-android:
+  build:
     runs-on: windows-latest
     
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
+    - uses: actions/checkout@v4
+    
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 8.0.x
         
-    - name: Install MAUI Workload
-      run: |
-        dotnet workload install maui-android
-        dotnet workload install android
+    - name: Install MAUI
+      run: dotnet workload install maui-android
+    
+    - name: Restore
+      run: dotnet restore MathToolsApp.csproj
       
-    - name: Restore dependencies
-      run: dotnet restore
+    - name: Build APK
+      run: dotnet build MathToolsApp.csproj -c Debug -f net8.0-android
       
-    - name: Cache NuGet packages
-      uses: actions/cache@v4
-      with:
-        path: ~/.nuget/packages
-        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
-        restore-keys: |
-          ${{ runner.os }}-nuget-
-          
-    - name: Build Debug APK
-      run: dotnet build -c Debug -f net8.0-android --no-restore
-      
-    - name: Run Unit Tests (if exists)
-      run: |
-        if (Test-Path "*.Tests.csproj") {
-          dotnet test --no-build --verbosity normal
-        } else {
-          Write-Host "No test projects found, skipping tests"
-        }
-      
-    - name: Upload Debug APK
+    - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: math-tools-debug-apk
+        name: MathToolsApp-debug
         path: '**/*.apk'
-        if-no-files-found: warn
-        compression-level: 0
-        
-    - name: Build Release APK (signed)
-      if: startsWith(github.ref, 'refs/tags/v')
-      env:
-        KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-        KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-        KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-      run: |
-        # Decode keystore from secret
-        echo "$env:KEYSTORE_BASE64" | base64 -d > keystore.keystore
-        
-        # Build signed APK
-        dotnet publish -c Release -f net8.0-android `
-          /p:AndroidKeyStore=true `
-          /p:AndroidSigningKeyStore=keystore.keystore `
-          /p:AndroidSigningStorePass=$env:KEYSTORE_PASSWORD `
-          /p:AndroidSigningKeyAlias=$env:KEY_ALIAS `
-          /p:AndroidSigningKeyPass=$env:KEY_PASSWORD `
-          /p:ApplicationVersion=${{ github.run_number }} `
-          /p:ApplicationDisplayVersion=1.0.${{ github.run_number }}
-          
-    - name: Upload Release APK
-      if: startsWith(github.ref, 'refs/tags/v')
-      uses: actions/upload-artifact@v4
-      with:
-        name: math-tools-release-apk
-        path: '**/*-Signed.apk'
-        if-no-files-found: error
-        
-    - name: Create GitHub Release
-      if: startsWith(github.ref, 'refs/tags/v')
-      uses: softprops/action-gh-release@v1
-      with:
-        files: '**/*-Signed.apk'
-        generate_release_notes: true
-        draft: false
-        prerelease: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
