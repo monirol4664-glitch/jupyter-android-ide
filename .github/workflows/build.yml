@@ -1,0 +1,57 @@
+name: Build Math Tools APK
+
+on:
+  push:
+    branches: [ main ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-android:
+    runs-on: windows-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 8.0.x
+        
+    - name: Install MAUI Workload
+      run: dotnet workload install maui-android
+      
+    - name: Restore dependencies
+      run: dotnet restore
+      
+    - name: Build Debug APK
+      run: dotnet build -c Debug -f net8.0-android
+      
+    - name: Run Unit Tests
+      run: dotnet test
+      
+    - name: Upload Debug APK
+      uses: actions/upload-artifact@v3
+      with:
+        name: math-tools-debug
+        path: '**/*.apk'
+        
+    - name: Build Release APK
+      if: startsWith(github.ref, 'refs/tags/v')
+      run: |
+        echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > keystore.keystore
+        dotnet publish -c Release -f net8.0-android `
+          /p:AndroidKeyStore=true `
+          /p:AndroidSigningKeyStore=keystore.keystore `
+          /p:AndroidSigningStorePass=${{ secrets.KEYSTORE_PASSWORD }} `
+          /p:AndroidSigningKeyAlias=${{ secrets.KEY_ALIAS }} `
+          /p:AndroidSigningKeyPass=${{ secrets.KEY_PASSWORD }}
+          
+    - name: Upload Release APK
+      if: startsWith(github.ref, 'refs/tags/v')
+      uses: actions/upload-artifact@v3
+      with:
+        name: math-tools-release
+        path: '**/*-Signed.apk'
