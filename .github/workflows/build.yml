@@ -1,4 +1,4 @@
-name: Build Working APK
+name: Build APK
 
 on:
   push:
@@ -7,27 +7,44 @@ on:
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     
     steps:
     - uses: actions/checkout@v4
     
-    - name: Setup .NET 9
-      uses: actions/setup-dotnet@v4
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
       with:
-        dotnet-version: 9.0.x
-        
-    - name: Install MAUI
-      run: dotnet workload install maui-android
+        node-version: 20
     
-    - name: Restore
-      run: dotnet restore
-        
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+    
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+    
+    - name: Install Dependencies
+      run: |
+        npm install -g @ionic/cli
+        npm install
+    
+    - name: Build Web App
+      run: npm run build
+    
+    - name: Sync Capacitor
+      run: npx cap sync android
+    
     - name: Build APK
-      run: dotnet build -c Release -f net9.0-android
-      
+      working-directory: android
+      run: |
+        chmod +x gradlew
+        ./gradlew assembleDebug
+    
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: MathToolsApp-Final
-        path: '**/*.apk'
+        name: app-debug
+        path: android/app/build/outputs/apk/debug/*.apk
