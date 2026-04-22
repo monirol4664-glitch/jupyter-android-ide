@@ -126,9 +126,6 @@ jobs:
                     minifyEnabled false
                     proguardFiles getDefaultProguardFile('proguard-android.txt')
                 }
-                debug {
-                    debuggable true
-                }
             }
         }
         
@@ -142,6 +139,14 @@ jobs:
         cat > android/settings.gradle << 'EOF'
         include ':app'
         rootProject.name = "MathMaster"
+        EOF
+    
+    - name: Create gradle.properties WITH ANDROIDX
+      run: |
+        cat > android/gradle.properties << 'EOF'
+        org.gradle.jvmargs=-Xmx2048m
+        android.useAndroidX=true
+        android.enableJetifier=true
         EOF
     
     - name: Create gradle wrapper
@@ -174,32 +179,20 @@ jobs:
         chmod +x gradlew
         cd ..
     
-    - name: Build Debug APK (Signed)
+    - name: Build APK
       run: |
         cd android
         ./gradlew assembleDebug --no-daemon
         cd ..
     
-    - name: Create Debug Keystore and Sign
+    - name: Find APK
       run: |
-        cd android
-        # Create debug keystore
-        keytool -genkey -v -keystore debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug, O=Android, C=US"
-        
-        # Sign the APK
-        jarsigner -verbose -sigalg SHA1withRSA -digestalg SHA1 -keystore debug.keystore -storepass android -keypass android app/build/outputs/apk/debug/app-debug.apk androiddebugkey
-        
-        # Verify signature
-        jarsigner -verify app/build/outputs/apk/debug/app-debug.apk
-        
-        # Align the APK
-        $ANDROID_HOME/build-tools/33.0.0/zipalign -v -p 4 app/build/outputs/apk/debug/app-debug.apk MathMaster-signed.apk
-        
-        cd ..
+        find android -name "*.apk" -exec cp {} MathMaster.apk \;
+        echo "APK created at MathMaster.apk"
+        ls -la MathMaster.apk
     
-    - name: Upload Signed APK
+    - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: MathMaster-Signed
-        path: android/MathMaster-signed.apk
-        retention-days: 90
+        name: MathMaster-App
+        path: MathMaster.apk
