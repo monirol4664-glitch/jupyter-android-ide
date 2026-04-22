@@ -37,6 +37,9 @@ jobs:
         mkdir -p android/app/src/main/assets
         mkdir -p android/app/src/main/java/com/mathapp
         cp -r build/* android/app/src/main/assets/
+        
+        # Verify assets were copied
+        ls -la android/app/src/main/assets/
     
     - name: Create AndroidManifest.xml
       run: |
@@ -49,6 +52,7 @@ jobs:
                 android:allowBackup="true"
                 android:icon="@android:drawable/sym_def_app_icon"
                 android:label="MathMaster"
+                android:usesCleartextTraffic="true"
                 android:theme="@style/Theme.AppCompat.Light.NoActionBar">
                 <activity
                     android:name=".MainActivity"
@@ -63,24 +67,42 @@ jobs:
         </manifest>
         EOF
     
-    - name: Create MainActivity.java
+    - name: Create MainActivity.java with proper asset loading
       run: |
         cat > android/app/src/main/java/com/mathapp/MainActivity.java << 'EOF'
         package com.mathapp.pro;
         import android.os.Bundle;
         import android.webkit.WebView;
         import android.webkit.WebViewClient;
+        import android.webkit.WebSettings;
         import androidx.appcompat.app.AppCompatActivity;
+        
         public class MainActivity extends AppCompatActivity {
+            private WebView webView;
+            
             @Override
             protected void onCreate(Bundle savedInstanceState) {
                 super.onCreate(savedInstanceState);
-                WebView webView = new WebView(this);
+                webView = new WebView(this);
+                WebSettings webSettings = webView.getSettings();
+                webSettings.setJavaScriptEnabled(true);
+                webSettings.setDomStorageEnabled(true);
+                webSettings.setLoadWithOverviewMode(true);
+                webSettings.setUseWideViewPort(true);
                 webView.setWebViewClient(new WebViewClient());
-                webView.getSettings().setJavaScriptEnabled(true);
-                webView.getSettings().setDomStorageEnabled(true);
+                
+                // Load from assets folder
                 webView.loadUrl("file:///android_asset/index.html");
                 setContentView(webView);
+            }
+            
+            @Override
+            public void onBackPressed() {
+                if (webView.canGoBack()) {
+                    webView.goBack();
+                } else {
+                    super.onBackPressed();
+                }
             }
         }
         EOF
@@ -141,7 +163,7 @@ jobs:
         rootProject.name = "MathMaster"
         EOF
     
-    - name: Create gradle.properties WITH ANDROIDX
+    - name: Create gradle.properties
       run: |
         cat > android/gradle.properties << 'EOF'
         org.gradle.jvmargs=-Xmx2048m
@@ -185,11 +207,10 @@ jobs:
         ./gradlew assembleDebug --no-daemon
         cd ..
     
-    - name: Find APK
+    - name: Find and rename APK
       run: |
         find android -name "*.apk" -exec cp {} MathMaster.apk \;
-        echo "APK created at MathMaster.apk"
-        ls -la MathMaster.apk
+        echo "APK created"
     
     - name: Upload APK
       uses: actions/upload-artifact@v4
