@@ -1,24 +1,22 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    id("org.jetbrains.kotlin.plugin.compose")
+    kotlin("plugin.compose")
 }
 
 android {
-    namespace = "com.example.mathematicalengine"
+    namespace = "com.example.mathe"
     compileSdk = 35
+    ndkVersion = "26.1.10909125"
 
     defaultConfig {
-        applicationId = "com.example.mathematicalengine"
+        applicationId = "com.example.mathe"
         minSdk = 24
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
-
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        vectorDrawables {
-            useSupportLibrary = true
-        }
+        vectorDrawables.useSupportLibrary = true
     }
 
     buildTypes {
@@ -58,11 +56,12 @@ dependencies {
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.4")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 
-    // Symja for math engine
-    implementation("org.matheclipse:matheclipse-core:3.1.0-SNAPSHOT")  // Check latest snapshot [web:11]
+    // Symja math engine
+    implementation("org.matheclipse:matheclipse-core:3.1.0-SNAPSHOT")  // Or 3.0.1 if snapshot issues [web:11]
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
