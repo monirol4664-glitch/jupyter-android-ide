@@ -12,7 +12,7 @@ version = 0.1
 [android]
 android.api = 30
 android.minapi = 21
-android.ndk = 23b
+android.ndk = 25b
 android.accept_sdk_license = True
 android.arch = arm64-v8a
 android.permissions = WRITE_EXTERNAL_STORAGE
