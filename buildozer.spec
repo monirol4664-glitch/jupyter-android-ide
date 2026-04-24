@@ -27,17 +27,7 @@ fullscreen = 0
 # (list) Permissions
 android.permissions = WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE
 
-[buildozer]
-
-# (int) Log level (0 = error only, 1 = info, 2 = debug (with command output))
-log_level = 2
-
-# (bool) WARN: If set to True, it will stop the build if a Python file is missing required module.
-warn_on_root = 1
-
-[app]
-
-# (str) Android API level (the minimum API version)
+# (int) Android API level (the minimum API version)
 android.api = 30
 
 # (int) Minimum API required (21 = Android 5.0)
@@ -55,13 +45,13 @@ android.ndk_path =
 # (str) Android SDK directory (if empty, it will be automatically downloaded.)
 android.sdk_path = 
 
-# (str) Android entry point (default: main.py)
+# (str) Android entry point
 android.entrypoint = org.kivy.android.PythonActivity
 
-# (str) Android app theme (android:theme)
+# (str) Android app theme
 android.apptheme = @android:style/Theme.NoTitleBar
 
-# (list) Android logcat filters to use
+# (list) Android logcat filters
 android.logcat_filters = *:S python:D
 
 # (bool) Copy prebuilt python dependency
@@ -70,5 +60,22 @@ android.copy_libs = 1
 # (str) Android arch to build for (choices: armeabi-v7a, arm64-v8a, x86, x86_64)
 android.arch = arm64-v8a
 
-# (bool) Enable AndroidX support (required for modern Android)
+# (bool) Enable AndroidX support
 android.enable_androidx = True
+
+# (str) presplash file (leave blank to disable)
+# presplash.filename = %(source.dir)s/presplash.png
+
+# (str) Icon file (leave blank to disable)
+# icon.filename = %(source.dir)s/icon.png
+
+# (list) Supported languages
+# lang = en_US, fr_FR
+
+[buildozer]
+
+# (int) Log level (0 = error only, 1 = info, 2 = debug (with command output))
+log_level = 2
+
+# (bool) WARN: If set to True, it will stop the build if a Python file is missing required module.
+warn_on_root = 1
