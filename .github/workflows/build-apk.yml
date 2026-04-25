@@ -1,4 +1,4 @@
-name: Build Offline Python Notebook APK
+name: Build Python IDE APK
 on:
   workflow_dispatch:
 
@@ -19,98 +19,29 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         with:
-          cmdline-tools-version: 9477386
-          packages: 'platforms;android-34 build-tools;34.0.0'
+          packages: 'platforms;android-34'
           accept-android-sdk-licenses: true
       
-      - name: Create directory structure
+      - name: Create Android project
         run: |
-          mkdir -p app/src/main/assets/pyodide
+          mkdir -p app/src/main/assets
           mkdir -p app/src/main/java/com/app
-      
-      - name: Download Pyodide packages (with retry)
-        run: |
-          cd app/src/main/assets
-          
-          # Download with verbose output and retry logic
-          files=(
-            "pyodide.js"
-            "pyodide.asm.js" 
-            "pyodide.asm.wasm"
-            "python_stdlib.zip"
-            "repodata.json"
-            "numpy.js"
-            "numpy.data"
-            "matplotlib.js"
-            "matplotlib.data"
-          )
-          
-          for file in "${files[@]}"; do
-            echo "Downloading: $file"
-            curl -L --retry 3 --retry-delay 2 -o "$file" \
-              "https://cdn.jsdelivr.net/pyodide/v0.25.0/full/$file"
-            
-            if [ -f "$file" ]; then
-              echo "✅ Downloaded: $file ($(du -h $file | cut -f1))"
-            else
-              echo "❌ Failed to download: $file"
-              exit 1
-            fi
-          done
-          
-          cd ../../..
-      
-      - name: Copy source files
-        run: |
-          # Check if files exist
-          if [ ! -f "index.html" ]; then
-            echo "❌ index.html not found!"
-            exit 1
-          fi
-          if [ ! -f "MainActivity.java" ]; then
-            echo "❌ MainActivity.java not found!"
-            exit 1
-          fi
-          if [ ! -f "AndroidManifest.xml" ]; then
-            echo "❌ AndroidManifest.xml not found!"
-            exit 1
-          fi
-          
           cp index.html app/src/main/assets/
           cp MainActivity.java app/src/main/java/com/app/
           cp AndroidManifest.xml app/src/main/
           
-          echo "✅ Files copied successfully"
-      
-      - name: Create Gradle files
-        run: |
           cat > build.gradle << 'EOF'
           buildscript {
-              repositories {
-                  google()
-                  mavenCentral()
-              }
-              dependencies {
-                  classpath 'com.android.tools.build:gradle:7.4.2'
-              }
+              repositories { google(); mavenCentral() }
+              dependencies { classpath 'com.android.tools.build:gradle:7.4.2' }
           }
-          allprojects {
-              repositories {
-                  google()
-                  mavenCentral()
-              }
-          }
-          task clean(type: Delete) {
-              delete rootProject.buildDir
-          }
+          allprojects { repositories { google(); mavenCentral() } }
           EOF
           
           cat > app/build.gradle << 'EOF'
           apply plugin: 'com.android.application'
-          
           android {
               compileSdk 34
-              
               defaultConfig {
                   applicationId "com.app"
                   minSdk 21
@@ -118,32 +49,14 @@ jobs:
                   versionCode 1
                   versionName "1.0"
               }
-              
-              compileOptions {
-                  sourceCompatibility JavaVersion.VERSION_1_8
-                  targetCompatibility JavaVersion.VERSION_1_8
-              }
           }
           EOF
           
           echo 'include ":app"' > settings.gradle
           
-          cat > gradle.properties << 'EOF'
-          org.gradle.jvmargs=-Xmx1536m
-          android.useAndroidX=true
-          android.enableJetifier=true
-          EOF
-      
-      - name: Setup Gradle Wrapper
-        run: |
           mkdir -p gradle/wrapper
-          
           cat > gradle/wrapper/gradle-wrapper.properties << 'EOF'
-          distributionBase=GRADLE_USER_HOME
-          distributionPath=wrapper/dists
           distributionUrl=https\://services.gradle.org/distributions/gradle-7.5-bin.zip
-          zipStoreBase=GRADLE_USER_HOME
-          zipStorePath=wrapper/dists
           EOF
           
           curl -L -o gradle/wrapper/gradle-wrapper.jar \
@@ -151,29 +64,16 @@ jobs:
           
           cat > gradlew << 'EOF'
           #!/bin/sh
-          APP_HOME=$(cd "$(dirname "$0")"; pwd)
-          CLASSPATH=$APP_HOME/gradle/wrapper/gradle-wrapper.jar
-          exec java -cp $CLASSPATH org.gradle.wrapper.GradleWrapperMain "$@"
+          exec java -cp gradle/wrapper/gradle-wrapper.jar org.gradle.wrapper.GradleWrapperMain "$@"
           EOF
-          
           chmod +x gradlew
       
       - name: Build APK
         run: |
-          ./gradlew clean --no-daemon
-          ./gradlew assembleDebug --no-daemon --stacktrace
-          
-          if [ -f "app/build/outputs/apk/debug/app-debug.apk" ]; then
-            echo "✅ APK built successfully!"
-            ls -lh app/build/outputs/apk/debug/
-          else
-            echo "❌ APK not found"
-            exit 1
-          fi
+          ./gradlew assembleDebug --no-daemon
       
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Python-Notebook-Offline
-          path: app/build/outputs/apk/debug/app-debug.apk
-          retention-days: 30
+          name: Python-IDE
+          path: app/build/outputs/apk/debug/*.apk
