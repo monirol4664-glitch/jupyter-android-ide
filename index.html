@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Python IDE - Offline</title>
+    <title>Python IDE - With Graphs</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { height: 100vh; width: 100vw; overflow: hidden; background: #1e1e1e; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', monospace; }
@@ -11,6 +11,7 @@
         button { background: #0e639c; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px; }
         .run { background: #2ea043; }
         .clear { background: #da3633; }
+        .plot-btn { background: #6a0dad; }
         .status { background: #1e1e1e; color: #89e051; padding: 8px 12px; font-family: monospace; font-size: 12px; margin-left: auto; border-radius: 4px; }
         .split { display: flex; flex: 1; height: calc(100vh - 50px); }
         .editor-pane { flex: 1; display: flex; flex-direction: column; border-right: 1px solid #3e3e3e; }
@@ -18,6 +19,11 @@
         .pane-header { background: #2d2d2d; padding: 8px 12px; color: #ccc; font-size: 12px; font-weight: bold; border-bottom: 1px solid #3e3e3e; }
         #editor { flex: 1; }
         #output { flex: 1; background: #1e1e1e; color: #d4d4d4; font-family: 'Monaco', 'Courier New', monospace; font-size: 13px; padding: 15px; overflow-y: auto; white-space: pre-wrap; line-height: 1.4; }
+        .plot-container { display: none; flex-direction: column; height: 50%; border-top: 1px solid #3e3e3e; }
+        .plot-container.active { display: flex; }
+        .plot-header { background: #2d2d2d; padding: 8px 12px; color: #ccc; font-size: 12px; font-weight: bold; display: flex; justify-content: space-between; }
+        .plot-canvas { flex: 1; background: white; min-height: 0; }
+        #plotImage { width: 100%; height: 100%; object-fit: contain; background: white; }
         .loading { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #1e1e1e; color: #89e051; padding: 30px; border-radius: 10px; text-align: center; z-index: 1000; border: 1px solid #3e3e3e; }
         @media (max-width: 768px) { .split { flex-direction: column; } .editor-pane { border-right: none; border-bottom: 1px solid #3e3e3e; } }
     </style>
@@ -26,6 +32,7 @@
     <div class="toolbar">
         <button class="run" onclick="runCode()">▶ Run Code</button>
         <button class="clear" onclick="clearOutput()">🗑 Clear</button>
+        <button class="plot-btn" onclick="showPlots()">📊 Show Plots</button>
         <button onclick="loadExample()">📋 Examples</button>
         <div class="status" id="status">🐍 Initializing...</div>
     </div>
@@ -37,52 +44,70 @@
         <div class="output-pane">
             <div class="pane-header">📤 Output</div>
             <div id="output">Loading Python environment...</div>
+            <div class="plot-container" id="plotContainer">
+                <div class="plot-header">
+                    <span>📊 Generated Plots</span>
+                    <button onclick="hidePlots()" style="padding: 2px 8px; font-size: 11px;">✕ Close</button>
+                </div>
+                <div class="plot-canvas">
+                    <img id="plotImage" alt="Plot will appear here">
+                </div>
+            </div>
         </div>
     </div>
-    <div class="loading" id="loading">🐍 Loading Python Runtime...<br><small>Please wait</small></div>
+    <div class="loading" id="loading">🐍 Loading Python Runtime...<br><small>Please wait (first time: ~15 sec)</small></div>
 
     <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js"></script>
     <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
     
     <script>
         let editor, pyodide, isReady = false;
+        let currentPlotData = null;
         
         // Initialize Monaco Editor
         require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs' } });
         require(['vs/editor/editor.main'], function() {
             editor = monaco.editor.create(document.getElementById('editor'), {
                 value: `# ========================================
-#  PYTHON IDE - OFFLINE READY
+#  PYTHON IDE - WITH WORKING GRAPHS!
 # ========================================
 # 
-# ✅ Full Python 3.11 with:
-#    - numpy (numerical computing)
-#    - matplotlib (plotting)
-#    - scipy (scientific computing)
-#    - pandas (data analysis)
-#
-# Example code to get started:
+# Run this code to see a plot!
 
 import numpy as np
 import matplotlib.pyplot as plt
+import io
+import base64
 
-# Basic numpy operations
-arr = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
-print("Array:", arr)
-print(f"Mean: {np.mean(arr)}")
-print(f"Sum: {np.sum(arr)}")
-print(f"Standard deviation: {np.std(arr):.2f}")
-
-# Create a simple plot (text output)
-x = np.linspace(0, 10, 20)
+# Create data
+x = np.linspace(0, 10, 100)
 y = np.sin(x)
-print(f"\\nSine values: {y[:5]}...")
 
-# List comprehension
-squares = [x**2 for x in range(1, 11)]
-print(f"\\nSquares: {squares}")
+# Create the plot
+plt.figure(figsize=(10, 6))
+plt.plot(x, y, 'b-', linewidth=2, label='sin(x)')
+plt.plot(x, np.cos(x), 'r--', linewidth=2, label='cos(x)')
+plt.xlabel('x')
+plt.ylabel('y')
+plt.title('Sine and Cosine Waves')
+plt.legend()
+plt.grid(True, alpha=0.3)
 
-# Your code here:
+# Save plot to base64 string
+buffer = io.BytesIO()
+plt.savefig(buffer, format='png', dpi=100, bbox_inches='tight')
+buffer.seek(0)
+image_base64 = base64.b64encode(buffer.read()).decode()
+buffer.close()
+plt.close()
+
+# Print the base64 so JavaScript can catch it
+print(f"PLOT_IMAGE:{image_base64}")
+
+# Also print some statistics
+print(f"\\nStatistics:")
+print(f"sin(x) range: [{np.min(np.sin(x)):.2f}, {np.max(np.sin(x)):.2f}]")
+print(f"cos(x) range: [{np.min(np.cos(x)):.2f}, {np.max(np.cos(x)):.2f}]")
 `,
                 language: 'python',
                 theme: 'vs-dark',
@@ -118,7 +143,7 @@ print(f"\\nSquares: {squares}")
             });
         });
         
-        // Initialize Pyodide with all packages
+        // Initialize Pyodide
         async function initPyodide() {
             const loadingDiv = document.getElementById('loading');
             const outputDiv = document.getElementById('output');
@@ -128,7 +153,6 @@ print(f"\\nSquares: {squares}")
                 statusSpan.innerHTML = '📦 Loading Python...';
                 outputDiv.innerHTML = 'Initializing Python runtime...\n';
                 
-                // Load Pyodide
                 pyodide = await loadPyodide({
                     indexURL: "https://cdn.jsdelivr.net/pyodide/v0.25.0/full/"
                 });
@@ -136,70 +160,49 @@ print(f"\\nSquares: {squares}")
                 outputDiv.innerHTML += '✓ Python 3.11 loaded\n';
                 statusSpan.innerHTML = '📦 Installing numpy...';
                 
-                // Load core packages
-                const packages = ['numpy', 'matplotlib', 'pandas', 'scipy'];
+                await pyodide.loadPackage('numpy');
+                outputDiv.innerHTML += '✓ numpy loaded\n';
+                statusSpan.innerHTML = '📦 Installing matplotlib...';
                 
-                for (const pkg of packages) {
-                    outputDiv.innerHTML += `Loading ${pkg}...\n`;
-                    await pyodide.loadPackage(pkg);
-                    outputDiv.innerHTML += `✓ ${pkg} loaded\n`;
-                }
+                await pyodide.loadPackage('matplotlib');
+                outputDiv.innerHTML += '✓ matplotlib loaded\n';
                 
-                // Configure environment
+                // Configure matplotlib for PNG output (no GUI needed)
                 pyodide.runPython(`
                     import sys
-                    import builtins
-                    from io import StringIO
-                    
-                    # Redirect stdout for capture
-                    sys.stdout = StringIO()
-                    sys.stderr = StringIO()
-                    
-                    # Import common packages
                     import numpy as np
                     import matplotlib
                     matplotlib.use('Agg')
                     import matplotlib.pyplot as plt
                     
-                    # Print versions
-                    print("=" * 50)
-                    print("🐍 Python IDE - Ready!")
-                    print("=" * 50)
-                    print(f"Python: {sys.version.split()[0]}")
+                    # Setup output capture
+                    import io
+                    from contextlib import redirect_stdout
+                    
+                    sys.stdout_capture = io.StringIO()
+                    
+                    print("✅ Python IDE Ready!")
                     print(f"NumPy: {np.__version__}")
                     print(f"Matplotlib: {matplotlib.__version__}")
-                    
-                    try:
-                        import pandas as pd
-                        print(f"Pandas: {pd.__version__}")
-                    except:
-                        pass
-                    
-                    try:
-                        import scipy as sp
-                        print(f"SciPy: {sp.__version__}")
-                    except:
-                        pass
-                    
-                    print("=" * 50)
-                    print("Ready to execute Python code!")
+                    print("=" * 40)
+                    print("Graphs will appear as images above!")
                 `);
                 
-                const output = pyodide.runPython('sys.stdout.getvalue()');
+                const output = pyodide.runPython('sys.stdout_capture.getvalue()');
                 outputDiv.innerHTML = output;
                 
-                statusSpan.innerHTML = '✅ Ready | numpy + matplotlib + more';
+                statusSpan.innerHTML = '✅ Ready | Graphs Working!';
                 isReady = true;
                 loadingDiv.style.display = 'none';
                 
             } catch (err) {
-                outputDiv.innerHTML = `❌ Error: ${err.message}\n\nMake sure you have internet connection for first load.\nAfter first load, this will work offline.`;
+                outputDiv.innerHTML = `❌ Error: ${err.message}\n\nMake sure you have internet connection for first load.`;
                 statusSpan.innerHTML = '❌ Error';
-                loadingDiv.innerHTML = `Error: ${err.message}<br>Please check internet connection`;
+                loadingDiv.innerHTML = `Error: ${err.message}`;
             }
         }
         
-        // Run Python code
+        // Run Python code and capture plots
         async function runCode() {
             if (!isReady || !pyodide) {
                 document.getElementById('output').innerHTML = '⚠️ Python is still loading. Please wait...';
@@ -213,93 +216,193 @@ print(f"\\nSquares: {squares}")
             statusSpan.innerHTML = '▶ Running...';
             
             try {
-                // Reset output capture
+                // Reset capture
                 pyodide.runPython(`
                     import sys
-                    from io import StringIO
-                    sys.stdout = StringIO()
-                    sys.stderr = StringIO()
+                    import io
+                    sys.stdout_capture = io.StringIO()
+                    sys.stderr_capture = io.StringIO()
+                    
+                    # Redirect stdout
+                    class TeeIO:
+                        def __init__(self, capture):
+                            self.capture = capture
+                        def write(self, text):
+                            self.capture.write(text)
+                        def flush(self):
+                            pass
+                    
+                    sys.stdout = TeeIO(sys.stdout_capture)
+                    sys.stderr = TeeIO(sys.stderr_capture)
+                    
+                    # Clear any existing plot data
+                    plot_base64 = None
                 `);
                 
-                // Execute the code
+                // Execute user code
                 await pyodide.runPythonAsync(code);
                 
                 // Get captured output
-                const stdout = pyodide.runPython('sys.stdout.getvalue()');
-                const stderr = pyodide.runPython('sys.stderr.getvalue()');
+                const stdout = pyodide.runPython('sys.stdout_capture.getvalue()');
+                const stderr = pyodide.runPython('sys.stderr_capture.getvalue()');
                 
                 let output = stdout;
                 if (stderr) output += `\n[stderr]:\n${stderr}`;
-                if (!output.trim()) output = '✓ Code executed successfully (no output)';
+                
+                // Check for plot data in output
+                const plotMatch = stdout.match(/PLOT_IMAGE:([A-Za-z0-9+/=]+)/);
+                if (plotMatch) {
+                    const imageBase64 = plotMatch[1];
+                    document.getElementById('plotImage').src = `data:image/png;base64,${imageBase64}`;
+                    document.getElementById('plotContainer').classList.add('active');
+                    // Remove the plot marker from output
+                    output = output.replace(/PLOT_IMAGE:[A-Za-z0-9+/=]+/, '');
+                }
+                
+                if (!output.trim()) {
+                    output = '✓ Code executed successfully (no output)';
+                }
                 
                 outputDiv.innerHTML = output;
                 statusSpan.innerHTML = '✅ Ready';
                 
             } catch (err) {
-                outputDiv.innerHTML = `❌ Python Error:\n${err.message}`;
+                // Check if error contains plot data
+                const errMsg = err.message;
+                const plotMatch = errMsg.match(/PLOT_IMAGE:([A-Za-z0-9+/=]+)/);
+                if (plotMatch) {
+                    document.getElementById('plotImage').src = `data:image/png;base64,${plotMatch[1]}`;
+                    document.getElementById('plotContainer').classList.add('active');
+                }
+                outputDiv.innerHTML = `❌ Python Error:\n${errMsg}`;
                 statusSpan.innerHTML = '❌ Error';
             }
         }
         
         function clearOutput() {
             document.getElementById('output').innerHTML = '';
+            hidePlots();
+        }
+        
+        function showPlots() {
+            const img = document.getElementById('plotImage');
+            if (img.src && img.src !== '') {
+                document.getElementById('plotContainer').classList.add('active');
+            } else {
+                document.getElementById('output').innerHTML += '\n\n⚠️ No plots generated yet. Run code that creates plots first.';
+            }
+        }
+        
+        function hidePlots() {
+            document.getElementById('plotContainer').classList.remove('active');
         }
         
         function loadExample() {
             const examples = {
-                'Numpy Basics': `import numpy as np
-
-# Create arrays
-a = np.array([1, 2, 3, 4, 5])
-b = np.array([10, 20, 30, 40, 50])
-
-print("Array a:", a)
-print("Array b:", b)
-print("a + b:", a + b)
-print("a * 2:", a * 2)
-print("Mean of a:", np.mean(a))
-print("Sum of a:", np.sum(a))`,
-                
-                'Matplotlib Plot': `import numpy as np
+                'Simple Plot': `import numpy as np
 import matplotlib.pyplot as plt
+import io
+import base64
 
 # Create data
-x = np.linspace(0, 10, 50)
+x = np.linspace(0, 10, 100)
 y = np.sin(x)
 
-print("x values:", x[:5])
-print("sin(x) values:", y[:5])
-print("\\nPlot data generated successfully!")
+# Create plot
+plt.figure(figsize=(10, 6))
+plt.plot(x, y, 'b-', linewidth=2)
+plt.xlabel('x')
+plt.ylabel('sin(x)')
+plt.title('Sine Wave')
+plt.grid(True, alpha=0.3)
 
-# Calculate statistics
-print(f"Max sin(x): {np.max(y):.3f}")
-print(f"Min sin(x): {np.min(y):.3f}")
-print(f"Mean sin(x): {np.mean(y):.3f}")`,
+# Save to base64
+buffer = io.BytesIO()
+plt.savefig(buffer, format='png', dpi=100, bbox_inches='tight')
+buffer.seek(0)
+image_base64 = base64.b64encode(buffer.read()).decode()
+buffer.close()
+plt.close()
+
+print(f"PLOT_IMAGE:{image_base64}")
+print("Sine wave generated successfully!")`,
                 
-                'Data Analysis': `import numpy as np
+                'Multiple Plots': `import numpy as np
+import matplotlib.pyplot as plt
+import io
+import base64
+
+# Create data
+x = np.linspace(-5, 5, 100)
+y1 = x**2
+y2 = x**3
+y3 = np.exp(-x**2/2)
+
+# Create subplots
+fig, axes = plt.subplots(2, 2, figsize=(10, 8))
+axes[0,0].plot(x, y1, 'r-')
+axes[0,0].set_title('Quadratic')
+axes[0,1].plot(x, y2, 'g-')
+axes[0,1].set_title('Cubic')
+axes[1,0].plot(x, y3, 'b-')
+axes[1,0].set_title('Gaussian')
+axes[1,1].hist(np.random.randn(1000), bins=30, color='purple', alpha=0.7)
+axes[1,1].set_title('Histogram')
+
+plt.tight_layout()
+
+buffer = io.BytesIO()
+plt.savefig(buffer, format='png', dpi=100, bbox_inches='tight')
+buffer.seek(0)
+image_base64 = base64.b64encode(buffer.read()).decode()
+buffer.close()
+plt.close()
+
+print(f"PLOT_IMAGE:{image_base64}")
+print("Multiple plots created!")`,
+                
+                'Data Visualization': `import numpy as np
+import matplotlib.pyplot as plt
+import io
+import base64
 
 # Generate random data
-data = np.random.normal(100, 15, 100)
+data = np.random.normal(100, 15, 500)
 
-print("Data Analysis Example")
-print("=" * 30)
-print(f"Sample size: {len(data)}")
-print(f"Mean: {np.mean(data):.2f}")
-print(f"Median: {np.median(data):.2f}")
-print(f"Std Dev: {np.std(data):.2f}")
-print(f"Min: {np.min(data):.2f}")
-print(f"Max: {np.max(data):.2f}")
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
 
-# Histogram bins
-hist, bins = np.histogram(data, bins=10)
-print(f"\\nHistogram bins: {len(bins)-1}")
-print(f"Frequency distribution: {hist}")`
+# Histogram
+ax1.hist(data, bins=30, edgecolor='black', alpha=0.7)
+ax1.set_title('Data Distribution')
+ax1.set_xlabel('Value')
+ax1.set_ylabel('Frequency')
+
+# Box plot
+ax2.boxplot(data)
+ax2.set_title('Box Plot')
+ax2.set_ylabel('Value')
+
+plt.tight_layout()
+
+buffer = io.BytesIO()
+plt.savefig(buffer, format='png', dpi=100, bbox_inches='tight')
+buffer.seek(0)
+image_base64 = base64.b64encode(buffer.read()).decode()
+buffer.close()
+plt.close()
+
+print(f"PLOT_IMAGE:{image_base64}")
+print(f"Data Statistics:")
+print(f"  Mean: {np.mean(data):.2f}")
+print(f"  Std Dev: {np.std(data):.2f}")
+print(f"  Min: {np.min(data):.2f}")
+print(f"  Max: {np.max(data):.2f}")`
             };
             
-            let choice = prompt("Select example:\n1 - Numpy Basics\n2 - Matplotlib Plot\n3 - Data Analysis", "1");
-            if (choice === '1') editor.setValue(examples['Numpy Basics']);
-            else if (choice === '2') editor.setValue(examples['Matplotlib Plot']);
-            else if (choice === '3') editor.setValue(examples['Data Analysis']);
+            let choice = prompt("Select example:\n1 - Simple Plot\n2 - Multiple Plots\n3 - Data Visualization", "1");
+            if (choice === '1') editor.setValue(examples['Simple Plot']);
+            else if (choice === '2') editor.setValue(examples['Multiple Plots']);
+            else if (choice === '3') editor.setValue(examples['Data Visualization']);
         }
         
         // Start initialization
