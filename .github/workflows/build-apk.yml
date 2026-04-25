@@ -12,18 +12,18 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '11'
       
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
       
-      - name: Build APK from HTML
+      - name: Build APK
         run: |
-          # Create Android project structure
+          # Create project structure
           mkdir -p app/src/main/assets
           mkdir -p app/src/main/java/com/app
           
-          # Copy your HTML editor
+          # Copy HTML file
           cp editor.html app/src/main/assets/
           
           # Create MainActivity
@@ -41,6 +41,7 @@ jobs:
                   WebView webView = new WebView(this);
                   WebSettings webSettings = webView.getSettings();
                   webSettings.setJavaScriptEnabled(true);
+                  webSettings.setDomStorageEnabled(true);
                   webView.loadUrl("file:///android_asset/editor.html");
                   setContentView(webView);
               }
@@ -64,38 +65,44 @@ jobs:
           </manifest>
           EOF
           
-          # Create build.gradle files
+          # Create gradle.properties
+          cat > gradle.properties << 'EOF'
+          org.gradle.jvmargs=-Xmx1536m
+          android.useAndroidX=true
+          android.enableJetifier=true
+          EOF
+          
+          # Create build.gradle (root)
           cat > build.gradle << 'EOF'
           buildscript {
               repositories {
                   google()
-                  mavenCentral()
+                  jcenter()
               }
               dependencies {
-                  classpath 'com.android.tools.build:gradle:8.1.0'
+                  classpath 'com.android.tools.build:gradle:3.5.4'
               }
           }
+          
           allprojects {
               repositories {
                   google()
-                  mavenCentral()
+                  jcenter()
               }
-          }
-          tasks.register('clean', Delete) {
-              delete rootProject.buildDir
           }
           EOF
           
+          # Create build.gradle (app)
           cat > app/build.gradle << 'EOF'
           apply plugin: 'com.android.application'
           
           android {
-              compileSdk 34
+              compileSdkVersion 29
               
               defaultConfig {
                   applicationId "com.app"
-                  minSdk 21
-                  targetSdk 34
+                  minSdkVersion 21
+                  targetSdkVersion 29
                   versionCode 1
                   versionName "1.0"
               }
@@ -108,17 +115,47 @@ jobs:
           }
           EOF
           
+          # Create settings.gradle
           echo 'include ":app"' > settings.gradle
           
-          # Generate gradle wrapper
-          echo "Creating gradle wrapper..."
-          gradle wrapper --gradle-version 8.0
+          # Create local.properties
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
           
-          # Make gradlew executable
+          # Generate wrapper.properties manually (to avoid gradle command)
+          mkdir -p gradle/wrapper
+          cat > gradle/wrapper/gradle-wrapper.properties << 'EOF'
+          distributionBase=GRADLE_USER_HOME
+          distributionPath=wrapper/dists
+          distributionUrl=https\://services.gradle.org/distributions/gradle-6.5-bin.zip
+          zipStoreBase=GRADLE_USER_HOME
+          zipStorePath=wrapper/dists
+          EOF
+          
+          # Download gradle wrapper
+          curl -L https://raw.githubusercontent.com/gradle/gradle/v6.5.0/gradle/wrapper/gradle-wrapper.jar -o gradle/wrapper/gradle-wrapper.jar
+          
+          # Create gradlew script
+          cat > gradlew << 'EOF'
+          #!/bin/sh
+          if [ -n "$JAVA_HOME" ] ; then
+              if [ -x "$JAVA_HOME/bin/java" ] ; then
+                  JAVACMD="$JAVA_HOME/bin/java"
+              fi
+          fi
+          
+          if [ -z "$JAVACMD" ] ; then
+              if [ -z "$JAVA_HOME" ] ; then
+                  JAVACMD=java
+              fi
+          fi
+          
+          CLASSPATH=$APP_HOME/gradle/wrapper/gradle-wrapper.jar
+          exec "$JAVACMD" -cp "$CLASSPATH" org.gradle.wrapper.GradleWrapperMain "$@"
+          EOF
+          
           chmod +x gradlew
           
           # Build the APK
-          echo "Building APK..."
           ./gradlew assembleDebug --no-daemon
       
       - name: Upload APK
