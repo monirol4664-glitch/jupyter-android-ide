@@ -11,7 +11,7 @@
             box-sizing: border-box;
             -webkit-tap-highlight-color: transparent;
         }
-        
+
         body {
             height: 100vh;
             width: 100vw;
@@ -19,14 +19,16 @@
             background: #1e1e1e;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace;
         }
-        
-        .app-container {
+
+        /* App Layout */
+        .app {
             display: flex;
             flex-direction: column;
             height: 100%;
             width: 100%;
         }
-        
+
+        /* Toolbar */
         .toolbar {
             background: #2d2d2d;
             padding: 8px 12px;
@@ -36,24 +38,24 @@
             border-bottom: 1px solid #3e3e3e;
             flex-shrink: 0;
         }
-        
+
         button {
             background: #0e639c;
             color: white;
             border: none;
-            padding: 8px 14px;
+            padding: 8px 16px;
             border-radius: 6px;
             cursor: pointer;
             font-size: 13px;
             font-weight: 500;
             transition: all 0.2s ease;
         }
-        
+
         button:active { transform: scale(0.96); opacity: 0.8; }
         .run { background: #2ea043; }
         .clear { background: #da3633; }
-        .plot-btn { background: #6a0dad; }
-        
+        .plot { background: #6a0dad; }
+
         .status {
             background: #1e1e1e;
             color: #89e051;
@@ -66,49 +68,67 @@
             align-items: center;
             gap: 6px;
         }
-        
-        .status::before {
+
+        .status.loading::before {
             content: "●";
-            color: #2ea043;
+            color: #f0ad4e;
             font-size: 8px;
             animation: pulse 1s infinite;
         }
-        .status.ready::before { animation: none; }
-        
+        .status.ready::before { content: "●"; color: #2ea043; font-size: 8px; }
+        .status.error::before { content: "●"; color: #da3633; font-size: 8px; }
+
         @keyframes pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.3; }
         }
-        
-        .main-area {
+
+        /* Main Content */
+        .main {
             display: flex;
             flex: 1;
             min-height: 0;
             overflow: hidden;
-            transition: all 0.3s ease;
         }
-        
+
+        /* Editor Area */
         .editor-area {
             flex: 1;
             display: flex;
             flex-direction: column;
             min-width: 0;
         }
-        
+
+        .editor-header {
+            background: #2d2d2d;
+            padding: 8px 12px;
+            color: #ccc;
+            font-size: 11px;
+            font-weight: 600;
+            border-bottom: 1px solid #3e3e3e;
+            flex-shrink: 0;
+        }
+
+        #editor {
+            flex: 1;
+            min-height: 0;
+        }
+
+        /* Output Area - Minimizable */
         .output-area {
-            width: 40%;
+            width: 35%;
             display: flex;
             flex-direction: column;
             background: #1e1e1e;
             border-left: 1px solid #3e3e3e;
-            transition: width 0.3s ease;
+            transition: width 0.25s ease;
         }
-        
+
         .output-area.minimized {
             width: 40px;
             min-width: 40px;
         }
-        
+
         .output-header {
             background: #2d2d2d;
             padding: 8px 12px;
@@ -119,12 +139,24 @@
             flex-shrink: 0;
             cursor: pointer;
         }
-        
         .output-header:hover { background: #3d3d3d; }
-        .output-title { color: #ccc; font-size: 11px; font-weight: 600; letter-spacing: 0.5px; }
-        .minimize-btn { background: none; padding: 0; font-size: 16px; color: #ccc; width: 28px; }
+
+        .output-title {
+            color: #ccc;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .minimize-btn {
+            background: none;
+            padding: 0;
+            font-size: 14px;
+            color: #ccc;
+            width: 28px;
+        }
         .minimize-btn:active { transform: none; opacity: 0.7; }
-        
+
         .output-content {
             flex: 1;
             overflow-y: auto;
@@ -136,24 +168,16 @@
             word-wrap: break-word;
             color: #d4d4d4;
         }
-        
+
         .output-area.minimized .output-content { display: none; }
-        .output-area.minimized .output-title { transform: rotate(-90deg); white-space: nowrap; }
-        
-        .pane-header {
-            background: #2d2d2d;
-            padding: 8px 12px;
-            color: #ccc;
-            font-size: 11px;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-            border-bottom: 1px solid #3e3e3e;
-            flex-shrink: 0;
+        .output-area.minimized .output-title { 
+            writing-mode: vertical-rl;
+            transform: rotate(180deg);
+            white-space: nowrap;
+            margin: 20px 0;
         }
-        
-        #editor { flex: 1; min-height: 0; }
-        
-        /* Plot Modal */
+
+        /* Plot Modal - Full Screen */
         .plot-modal {
             display: none;
             position: fixed;
@@ -167,8 +191,8 @@
             animation: fadeIn 0.2s ease;
         }
         .plot-modal.active { display: flex; }
-        
-        .plot-modal-header {
+
+        .plot-header {
             background: #2d2d2d;
             padding: 12px 16px;
             display: flex;
@@ -177,9 +201,9 @@
             border-bottom: 1px solid #3e3e3e;
             flex-shrink: 0;
         }
-        .plot-modal-header h3 { color: #89e051; font-size: 16px; font-weight: 500; }
+        .plot-header h3 { color: #89e051; font-size: 16px; font-weight: 500; }
         .close-plot { background: #da3633; padding: 6px 16px; font-size: 14px; }
-        
+
         .plot-content {
             flex: 1;
             display: flex;
@@ -189,6 +213,7 @@
             overflow: auto;
             -webkit-overflow-scrolling: touch;
         }
+
         #plotImage {
             max-width: 100%;
             max-height: 100%;
@@ -196,10 +221,9 @@
             height: auto;
             object-fit: contain;
             border-radius: 8px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
             transition: transform 0.2s ease;
         }
-        
+
         .plot-controls {
             background: #2d2d2d;
             padding: 10px 16px;
@@ -209,75 +233,71 @@
             flex-shrink: 0;
             border-top: 1px solid #3e3e3e;
         }
-        
-        .loading {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: #1e1e1e;
-            color: #89e051;
-            padding: 30px 40px;
-            border-radius: 12px;
-            text-align: center;
-            z-index: 3000;
-            border: 1px solid #3e3e3e;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+
+        .plot-controls button { padding: 6px 16px; font-size: 12px; }
+
+        /* Mobile Optimization */
+        @media (max-width: 768px) {
+            .main { flex-direction: column; }
+            .editor-area { flex: 1; }
+            .output-area { width: 100%; height: 35%; border-left: none; border-top: 1px solid #3e3e3e; }
+            .output-area.minimized { height: 40px; width: 100%; }
+            .output-area.minimized .output-title { 
+                writing-mode: horizontal-tb;
+                transform: none;
+                margin: 0;
+            }
+            button { padding: 6px 12px; font-size: 12px; }
         }
-        .error { color: #f85149; }
-        
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: #1e1e1e; }
+        ::-webkit-scrollbar-thumb { background: #3e3e3e; border-radius: 2px; }
+
+        .error-text { color: #f85149; }
+        .success-text { color: #89e051; }
+
         @keyframes fadeIn {
             from { opacity: 0; }
             to { opacity: 1; }
         }
-        
-        @media (max-width: 768px) {
-            .main-area { flex-direction: column; }
-            .editor-area { flex: 1; }
-            .output-area { width: 100%; height: 35%; border-left: none; border-top: 1px solid #3e3e3e; }
-            .output-area.minimized { height: 40px; width: 100%; }
-            .output-area.minimized .output-title { transform: none; }
-        }
-        
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #1e1e1e; }
-        ::-webkit-scrollbar-thumb { background: #3e3e3e; border-radius: 3px; }
     </style>
 </head>
 <body>
-    <div class="app-container">
+    <div class="app">
         <div class="toolbar">
             <button class="run" onclick="runCode()">▶ Run</button>
             <button class="clear" onclick="clearOutput()">🗑 Clear</button>
-            <button class="plot-btn" onclick="showPlotModal()">📊 View Plot</button>
+            <button class="plot" onclick="showPlot()">📊 Plot</button>
             <button onclick="showHelp()">ℹ️ Help</button>
-            <div class="status" id="status">Initializing...</div>
+            <div class="status loading" id="status">Starting...</div>
         </div>
-        
-        <div class="main-area" id="mainArea">
+
+        <div class="main">
             <div class="editor-area">
-                <div class="pane-header">📝 Python Code</div>
+                <div class="editor-header">📝 Code</div>
                 <div id="editor"></div>
             </div>
-            
+
             <div class="output-area" id="outputArea">
                 <div class="output-header" onclick="toggleOutput()">
                     <span class="output-title">📤 Output</span>
-                    <button class="minimize-btn" id="minimizeBtn">◀</button>
+                    <button class="minimize-btn" id="minimizeBtn">▶</button>
                 </div>
-                <div class="output-content" id="output">Loading Python environment...</div>
+                <div class="output-content" id="output">Initializing Python with numpy & matplotlib...</div>
             </div>
         </div>
     </div>
-    
+
     <!-- Plot Modal -->
     <div class="plot-modal" id="plotModal">
-        <div class="plot-modal-header">
-            <h3>📊 Plot Output</h3>
-            <button class="close-plot" onclick="closePlotModal()">✕ Close</button>
+        <div class="plot-header">
+            <h3>📊 Plot</h3>
+            <button class="close-plot" onclick="closePlot()">✕ Close</button>
         </div>
         <div class="plot-content">
-            <img id="plotImage" alt="Plot will appear here">
+            <img id="plotImage" alt="Plot">
         </div>
         <div class="plot-controls">
             <button onclick="zoomIn()">🔍 Zoom In</button>
@@ -286,278 +306,254 @@
             <button onclick="downloadPlot()">💾 Save</button>
         </div>
     </div>
-    
-    <div class="loading" id="loading" style="display: none;">
-        <div>🐍 Loading Python...</div>
-        <small id="loadingStep">Starting...</small>
-        <br><br>
-        <button onclick="retryLoad()">🔄 Retry</button>
-    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js"></script>
-    
     <script>
         let editor, pyodide, isReady = false;
-        let currentPlotBase64 = null;
-        let currentZoom = 1;
-        let outputMinimized = false;
-        
+        let currentPlot = null;
+        let zoom = 1;
+        let outputMinimized = true;  // Start minimized
+
         // Toggle output panel
         function toggleOutput() {
-            const outputArea = document.getElementById('outputArea');
-            const minimizeBtn = document.getElementById('minimizeBtn');
+            const area = document.getElementById('outputArea');
+            const btn = document.getElementById('minimizeBtn');
             outputMinimized = !outputMinimized;
             
             if (outputMinimized) {
-                outputArea.classList.add('minimized');
-                minimizeBtn.innerHTML = '▶';
+                area.classList.add('minimized');
+                btn.innerHTML = '▶';
             } else {
-                outputArea.classList.remove('minimized');
-                minimizeBtn.innerHTML = '◀';
+                area.classList.remove('minimized');
+                btn.innerHTML = '◀';
             }
         }
-        
+
         // Initialize Monaco Editor
         function initEditor() {
             require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs' } });
             require(['vs/editor/editor.main'], function() {
                 editor = monaco.editor.create(document.getElementById('editor'), {
-                    value: `# Python IDE
-# Write your code here
-
-import numpy as np
+                    value: `import numpy as np
 import matplotlib.pyplot as plt
 
-# Simple calculations
-print("Hello from Python!")
-print(f"2 + 2 = {2 + 2}")
-
-# Create a plot
+# Create data
 x = np.linspace(0, 10, 100)
-plt.plot(x, np.sin(x))
+y = np.sin(x)
+
+# Print output
+print("Hello from Python!")
+print(f"NumPy: {np.__version__}")
+print(f"Mean: {np.mean(y):.3f}")
+
+# Create plot
+plt.plot(x, y)
 plt.title("Sine Wave")
 plt.xlabel("x")
 plt.ylabel("sin(x)")
 plt.grid(True)
-plt.show()
-`,
+plt.show()`,
                     language: 'python',
                     theme: 'vs-dark',
                     fontSize: 14,
                     automaticLayout: true,
                     lineNumbers: 'on',
                     wordWrap: 'on',
-                    suggestOnTriggerCharacters: true,
-                    quickSuggestions: true,
                     minimap: { enabled: false }
-                });
-                
-                // Python autocomplete
-                monaco.languages.registerCompletionItemProvider('python', {
-                    provideCompletionItems: () => {
-                        const keywords = [
-                            'import', 'from', 'as', 'def', 'class', 'return',
-                            'if', 'elif', 'else', 'for', 'while', 'break',
-                            'continue', 'try', 'except', 'finally', 'with',
-                            'print', 'len', 'range', 'np', 'plt', 'numpy', 'matplotlib'
-                        ];
-                        return {
-                            suggestions: keywords.map(k => ({
-                                label: k,
-                                kind: monaco.languages.CompletionItemKind.Keyword,
-                                insertText: k,
-                                detail: 'Python'
-                            }))
-                        };
-                    }
                 });
             });
         }
-        
-        // Load Pyodide
-        async function loadPyodideWithRetry() {
-            const loadingDiv = document.getElementById('loading');
-            const loadingStep = document.getElementById('loadingStep');
-            const outputDiv = document.getElementById('output');
-            const statusSpan = document.getElementById('status');
+
+        // Load Pyodide with numpy & matplotlib
+        async function loadPython() {
+            const status = document.getElementById('status');
+            const output = document.getElementById('output');
             
-            loadingDiv.style.display = 'block';
-            loadingStep.innerHTML = 'Downloading Python runtime...';
+            status.className = 'status loading';
+            status.innerHTML = 'Downloading...';
+            output.innerHTML = '⏳ First time setup (10-20 seconds)\nDownloading Python + numpy + matplotlib...\n\nThis happens only once!\n';
             
             try {
-                if (typeof loadPyodide === 'undefined') {
-                    await new Promise((resolve, reject) => {
-                        const script = document.createElement('script');
-                        script.src = 'https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js';
-                        script.onload = resolve;
-                        script.onerror = reject;
-                        document.head.appendChild(script);
-                        setTimeout(() => reject(new Error('Timeout')), 30000);
-                    });
-                }
+                // Load Pyodide
+                output.innerHTML += '📦 Loading runtime...\n';
+                await new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = 'https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js';
+                    script.onload = resolve;
+                    script.onerror = () => reject(new Error('Network error'));
+                    document.head.appendChild(script);
+                    setTimeout(() => reject(new Error('Timeout')), 30000);
+                });
                 
-                loadingStep.innerHTML = 'Initializing Python...';
-                pyodide = await loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.25.0/full/" });
+                output.innerHTML += '✓ Runtime loaded\n🐍 Initializing...\n';
+                pyodide = await loadPyodide({ indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.25.0/full/' });
                 
-                loadingStep.innerHTML = 'Loading numpy...';
+                output.innerHTML += '✓ Python ready\n📦 Installing numpy...\n';
+                status.innerHTML = 'numpy...';
                 await pyodide.loadPackage('numpy');
                 
-                loadingStep.innerHTML = 'Loading matplotlib...';
+                output.innerHTML += '✓ numpy installed\n📦 Installing matplotlib...\n';
+                status.innerHTML = 'matplotlib...';
                 await pyodide.loadPackage('matplotlib');
                 
-                // Setup automatic plot capture
+                output.innerHTML += '✓ matplotlib installed\n🔧 Finalizing...\n';
+                
+                // Setup plot capture
                 pyodide.runPython(`
-                    import sys
-                    import io
-                    import base64
+                    import sys, io, base64
                     import matplotlib
                     matplotlib.use('Agg')
                     import matplotlib.pyplot as plt
+                    import numpy as np
                     
-                    # Store captured plots
                     captured_plots = []
-                    
-                    # Override plt.show() to capture plots
                     original_show = plt.show
                     
-                    def captured_show(*args, **kwargs):
-                        buffer = io.BytesIO()
-                        plt.savefig(buffer, format='png', dpi=100, bbox_inches='tight')
-                        buffer.seek(0)
-                        img_base64 = base64.b64encode(buffer.read()).decode()
-                        captured_plots.append(img_base64)
-                        buffer.close()
+                    def capture_plot(*args, **kwargs):
+                        buf = io.BytesIO()
+                        plt.savefig(buf, format='png', dpi=100, bbox_inches='tight')
+                        buf.seek(0)
+                        captured_plots.append(base64.b64encode(buf.read()).decode())
+                        buf.close()
                         plt.close()
-                        print(f"__PLOT_CAPTURED__")
+                        print("__PLOT__")
                     
-                    plt.show = captured_show
+                    plt.show = capture_plot
                     
-                    # Setup stdout capture
                     sys.stdout_capture = io.StringIO()
+                    class Tee:
+                        def __init__(self, cap): self.cap = cap
+                        def write(self, t): self.cap.write(t)
+                        def flush(self): pass
+                    sys.stdout = Tee(sys.stdout_capture)
                     
-                    class TeeIO:
-                        def __init__(self, capture):
-                            self.capture = capture
-                        def write(self, text):
-                            self.capture.write(text)
-                        def flush(self):
-                            pass
-                    
-                    sys.stdout = TeeIO(sys.stdout_capture)
-                    
-                    print("✅ Python Ready!")
+                    print("="*40)
+                    print("✅ Python IDE Ready!")
                     print(f"NumPy: {np.__version__}")
                     print(f"Matplotlib: {matplotlib.__version__}")
+                    print("="*40)
                 `);
                 
-                const output = pyodide.runPython('sys.stdout_capture.getvalue()');
-                outputDiv.innerHTML = output;
+                const readyMsg = pyodide.runPython('sys.stdout_capture.getvalue()');
+                output.innerHTML = readyMsg;
                 
-                statusSpan.innerHTML = 'Ready';
-                statusSpan.classList.add('ready');
+                status.className = 'status ready';
+                status.innerHTML = 'Ready';
                 isReady = true;
-                loadingDiv.style.display = 'none';
                 
             } catch (err) {
-                loadingStep.innerHTML = `<span class="error">Error: ${err.message}</span>`;
-                outputDiv.innerHTML = `❌ Failed to load Python: ${err.message}\n\nPlease check internet connection and try again.`;
-                statusSpan.innerHTML = 'Error';
-                setTimeout(() => { loadingDiv.style.display = 'none'; }, 3000);
+                output.innerHTML += `\n<span class="error-text">❌ Error: ${err.message}</span>\n\nPlease check internet connection.`;
+                status.className = 'status error';
+                status.innerHTML = 'Error';
             }
         }
-        
-        // Run Python code with automatic plot capture
+
+        // Run user code
         async function runCode() {
-            if (!isReady || !pyodide) {
-                document.getElementById('output').innerHTML = '⚠️ Python is loading. Please wait...';
+            if (!isReady) {
+                document.getElementById('output').innerHTML = '⚠️ Loading Python. Please wait...';
                 return;
             }
             
             const code = editor.getValue();
-            const statusSpan = document.getElementById('status');
-            const outputDiv = document.getElementById('output');
+            const status = document.getElementById('status');
+            const output = document.getElementById('output');
             
-            statusSpan.innerHTML = 'Running...';
-            statusSpan.classList.remove('ready');
+            status.className = 'status loading';
+            status.innerHTML = 'Running...';
             
             try {
-                // Reset capture
                 pyodide.runPython(`
                     import sys
                     sys.stdout_capture = io.StringIO()
-                    sys.stdout = TeeIO(sys.stdout_capture)
+                    sys.stdout = Tee(sys.stdout_capture)
                     captured_plots = []
                 `);
                 
-                // Execute code
                 await pyodide.runPythonAsync(code);
                 
-                // Get output
                 const stdout = pyodide.runPython('sys.stdout_capture.getvalue()');
                 const plots = pyodide.runPython('captured_plots');
                 
-                // Handle captured plots
-                if (plots && plots.length > 0) {
-                    currentPlotBase64 = plots[plots.length - 1];
-                    document.getElementById('plotImage').src = `data:image/png;base64,${currentPlotBase64}`;
+                if (plots && plots.length) {
+                    currentPlot = plots[plots.length - 1];
+                    document.getElementById('plotImage').src = `data:image/png;base64,${currentPlot}`;
                 }
                 
-                let output = stdout;
-                if (!output.trim()) {
-                    output = '✓ Code executed successfully';
-                }
-                
-                outputDiv.innerHTML = output;
-                statusSpan.innerHTML = 'Ready';
-                statusSpan.classList.add('ready');
+                output.innerHTML = stdout || '✓ Done';
+                status.className = 'status ready';
+                status.innerHTML = 'Ready';
                 
             } catch (err) {
-                outputDiv.innerHTML = `❌ Error:\n${err.message}`;
-                statusSpan.innerHTML = 'Error';
+                output.innerHTML = `<span class="error-text">❌ ${err.message}</span>`;
+                status.className = 'status error';
+                status.innerHTML = 'Error';
                 setTimeout(() => {
-                    statusSpan.innerHTML = 'Ready';
-                    statusSpan.classList.add('ready');
+                    status.className = 'status ready';
+                    status.innerHTML = 'Ready';
                 }, 2000);
             }
         }
-        
+
         function clearOutput() {
             document.getElementById('output').innerHTML = '';
-            currentPlotBase64 = null;
-            closePlotModal();
+            currentPlot = null;
+            closePlot();
         }
-        
-        function showPlotModal() {
-            if (currentPlotBase64) {
+
+        function showPlot() {
+            if (currentPlot) {
                 document.getElementById('plotModal').classList.add('active');
                 resetZoom();
             } else {
-                document.getElementById('output').innerHTML += '\n\n⚠️ No plot generated. Use plt.show() in your code.';
+                document.getElementById('output').innerHTML += '\n\n⚠️ No plot. Use plt.show()';
             }
         }
-        
-        function closePlotModal() {
+
+        function closePlot() {
             document.getElementById('plotModal').classList.remove('active');
             resetZoom();
         }
-        
-        function zoomIn() {
-            currentZoom = Math.min(currentZoom + 0.25, 3);
-            document.getElementById('plotImage').style.transform = `scale(${currentZoom})`;
-        }
-        
-        function zoomOut() {
-            currentZoom = Math.max(currentZoom - 0.25, 0.5);
-            document.getElementById('plotImage').style.transform = `scale(${currentZoom})`;
-        }
-        
-        function resetZoom() {
-            currentZoom = 1;
-            document.getElementById('plotImage').style.transform = 'scale(1)';
-        }
+
+        function zoomIn() { zoom = Math.min(zoom + 0.25, 3); updateZoom(); }
+        function zoomOut() { zoom = Math.max(zoom - 0.25, 0.5); updateZoom(); }
+        function resetZoom() { zoom = 1; updateZoom(); }
+        function updateZoom() { document.getElementById('plotImage').style.transform = `scale(${zoom})`; }
         
         function downloadPlot() {
-            if (currentPlotBase64) {
+            if (currentPlot) {
                 const link = document.createElement('a');
                 link.download = 'plot.png';
-                link.href = `data:image/png;
+                link.href = `data:image/png;base64,${currentPlot}`;
+                link.click();
+            }
+        }
+
+        function showHelp() {
+            document.getElementById('output').innerHTML = `
+<span class="success-text">📖 Python IDE</span>
+════════════════════════
+
+✅ numpy & matplotlib included
+✅ Use plt.show() for plots
+✅ Output panel is minimizable
+✅ First load: 10-20 sec
+
+Example:
+\`\`\`
+import numpy as np
+import matplotlib.pyplot as plt
+
+x = np.linspace(0, 10, 100)
+plt.plot(x, np.sin(x))
+plt.show()
+\`\`\`
+            `;
+        }
+
+        // Start
+        initEditor();
+        setTimeout(loadPython, 500);
+    </script>
+</body>
+</html>
