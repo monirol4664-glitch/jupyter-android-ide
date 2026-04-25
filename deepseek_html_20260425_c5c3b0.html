@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Python IDE - With Graphs</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            background: #1e1e1e;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace;
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+        
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            width: 100%;
+        }
+        
+        .toolbar {
+            background: #2d2d2d;
+            padding: 8px 12px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            border-bottom: 1px solid #3e3e3e;
+            flex-shrink: 0;
+        }
+        
+        button {
+            background: #0e639c;
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        
+        button:active {
+            transform: scale(0.96);
+            opacity: 0.8;
+        }
+        
+        .run { background: #2ea043; }
+        .clear { background: #da3633; }
+        .plot-btn { background: #6a0dad; }
+        
+        .status {
+            background: #1e1e1e;
+            color: #89e051;
+            padding: 6px 12px;
+            font-family: monospace;
+            font-size: 11px;
+            margin-left: auto;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .status::before {
+            content: "●";
+            color: #2ea043;
+            font-size: 8px;
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        
+        .split {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+            overflow: hidden;
+        }
+        
+        .editor-pane {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            border-right: 1px solid #3e3e3e;
+        }
+        
+        .output-pane {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+        
+        .pane-header {
+            background: #2d2d2d;
+            padding: 8px 12px;
+            color: #ccc;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #3e3e3e;
+            flex-shrink: 0;
+        }
+        
+        #editor {
+            flex: 1;
+            min-height: 0;
+        }
+        
+        #output {
+            flex: 1;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 12px;
+            padding: 12px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            line-height: 1.5;
+        }
+        
+        /* Plot Modal */
+        .plot-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.95);
+            z-index: 2000;
+            flex-direction: column;
+            animation: fadeIn 0.2s ease;
+        }
+        
+        .plot-modal.active {
+            display: flex;
+        }
+        
+        .plot-modal-header {
+            background: #2d2d2d;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #3e3e3e;
+            flex-shrink: 0;
+        }
+        
+        .plot-modal-header h3 {
+            color: #89e051;
+            font-size: 16px;
+            font-weight: 500;
+        }
+        
+        .close-plot {
+            background: #da3633;
+            padding: 6px 16px;
+            font-size: 14px;
+        }
+        
+        .plot-content {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 16px;
+            overflow: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        #plotImage {
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+        
+        .plot-controls {
+            background: #2d2d2d;
+            padding: 10px 16px;
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            flex-shrink: 0;
+            border-top: 1px solid #3e3e3e;
+        }
+        
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #1e1e1e;
+            color: #89e051;
+            padding: 30px 40px;
+            border-radius: 12px;
+            text-align: center;
+            z-index: 3000;
+            border: 1px solid #3e3e3e;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            min-width: 250px;
+        }
+        
+        .loading button {
+            margin-top: 15px;
+            background: #0e639c;
+        }
+        
+        .error {
+            color: #f85149;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @media (max-width: 768px) {
+            .split {
+                flex-direction: column;
+            }
+            .editor-pane {
+                flex: 1;
+                border-right: none;
+                border-bottom: 1px solid #3e3e3e;
+                min-height: 40%;
+            }
+            .output-pane {
+                flex: 0.8;
+            }
+            button {
+                padding: 6px 12px;
+                font-size: 12px;
+            }
+        }
+        
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #1e1e1e;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #3e3e3e;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="toolbar">
+            <button class="run" onclick="runCode()">▶ Run</button>
+            <button class="clear" onclick="clearOutput()">🗑 Clear</button>
+            <button class="plot-btn" onclick="showPlotModal()">📊 View Plot</button>
+            <button onclick="loadExample()">📋 Examples</button>
+            <div class="status" id="status">Initializing...</div>
+        </div>
+        
+        <div class="split">
+            <div class="editor-pane">
+                <div class="pane-header">📝 Python Code</div>
+                <div id="editor"></div>
+            </div>
+            <div class="output-pane">
+                <div class="pane-header">📤 Output</div>
+                <div id="output">Loading Python environment...<br>Please wait while Python initializes.<br><br>⚠️ If stuck, check internet connection.</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Plot Modal -->
+    <div class="plot-modal" id="plotModal">
+        <div class="plot-modal-header">
+            <h3>📊 Generated Plot</h3>
+            <button class="close-plot" onclick="closePlotModal()">✕ Close</button>
+        </div>
+        <div class="plot-content">
+            <img id="plotImage" alt="Plot will appear here">
+        </div>
+        <div class="plot-controls">
+            <button onclick="zoomIn()">🔍 Zoom In</button>
+            <button onclick="zoomOut()">🔍 Zoom Out</button>
+            <button onclick="resetZoom()">⟳ Reset</button>
+            <button onclick="downloadPlot()">💾 Save</button>
+        </div>
+    </div>
+    
+    <div class="loading" id="loading">
+        <div>🐍 Loading Python Runtime...</div>
+        <small>First time: 15-30 seconds</small><br>
+        <small id="loadingStep">Connecting...</small>
+        <br><br>
+        <button onclick="retryLoad()">🔄 Retry</button>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js"></script>
+    
+    <script>
+        let editor, pyodide, isReady = false;
+        let currentPlotBase64 = null;
+        let currentZoom = 1;
+        let loadAttempts = 0;
+        
+        // Initialize Monaco Editor
+        function initEditor() {
+            require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs' } });
+            require(['vs/editor/editor.main'], function() {
+                editor = monaco.editor.create(document.getElementById('editor'), {
+                    value: `# ========================================
+#  PYTHON IDE - WITH GRAPHS!
+# ========================================
+# 
+# Run this code to see a plot!
+
+import numpy as np
+import matplotlib.pyplot as plt
+import io
+import base64
+
+# Create data
+x = np.linspace(0, 10, 100)
+y = np.sin(x)
+
+# Create plot
+plt.figure(figsize=(12, 8))
+plt.plot(x, y, 'b-', linewidth=2.5, label='sin(x)')
+plt.xlabel('x', fontsize=12)
+plt.ylabel('y', fontsize=12)
+plt.title('Sine Wave', fontsize=14, fontweight='bold')
+plt.legend(fontsize=11)
+plt.grid(True, alpha=0.3)
+
+# Save to base64
+buffer = io.BytesIO()
+plt.savefig(buffer, format='png', dpi=120, bbox_inches='tight', facecolor='white')
+buffer.seek(0)
+image_base64 = base64.b64encode(buffer.read()).decode()
+buffer.close()
+plt.close()
+
+print(f"PLOT_IMAGE:{image_base64}")
+print("✅ Graph generated successfully!")
+print(f"\\n📊 Statistics:")
+print(f"  sin(x) range: [{np.min(np.sin(x)):.2f}, {np.max(np.sin(x)):.2f}]")
+`,
+                    language: 'python',
+                    theme: 'vs-dark',
+                    fontSize: 13,
+                    automaticLayout: true,
+                    lineNumbers: 'on',
+                    wordWrap: 'on',
+                    suggestOnTriggerCharacters: true,
+                    quickSuggestions: true,
+                    minimap: { enabled: false },
+                    scrollBeyondLastLine: false
+                });
+                
+                // Python autocomplete
+                monaco.languages.registerCompletionItemProvider('python', {
+                    provideCompletionItems: () => {
+                        const keywords = [
+                            'import', 'from', 'as', 'def', 'class', 'return',
+                            'if', 'elif', 'else', 'for', 'while', 'break',
+                            'continue', 'try', 'except', 'finally', 'with',
+                            'print', 'len', 'range', 'type', 'str', 'int',
+                            'float', 'list', 'dict', 'set', 'tuple',
+                            'np', 'plt', 'numpy', 'matplotlib'
+                        ];
+                        return {
+                            suggestions: keywords.map(k => ({
+                                label: k,
+                                kind: monaco.languages.CompletionItemKind.Keyword,
+                                insertText: k,
+                                detail: 'Python'
+                            }))
+                        };
+                    }
+                });
+            });
+        }
+        
+        // Load Pyodide with timeout and retry
+        async function loadPyodideWithRetry() {
+            const loadingDiv = document.getElementById('loading');
+            const loadingStep = document.getElementById('loadingStep');
+            const outputDiv = document.getElementById('output');
+            const statusSpan = document.getElementById('status');
+            
+            loadAttempts++;
+            loadingDiv.style.display = 'block';
+            loadingStep.innerHTML = `Attempt ${loadAttempts} of 3...`;
+            
+            try {
+                // Load Pyodide script dynamically
+                loadingStep.innerHTML = 'Downloading Pyodide runtime...';
+                
+                // Check if Pyodide is already loaded
+                if (typeof loadPyodide === 'undefined') {
+                    await new Promise((resolve, reject) => {
+                        const script = document.createElement('script');
+                        script.src = 'https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js';
+                        script.onload = resolve;
+                        script.onerror = reject;
+                        document.head.appendChild(script);
+                        setTimeout(() => reject(new Error('Timeout loading Pyodide')), 30000);
+                    });
+                }
+                
+                loadingStep.innerHTML = 'Initializing Python...';
+                
+                pyodide = await loadPyodide({
+                    indexURL: "https://cdn.jsdelivr.net/pyodide/v0.25.0/full/"
+                });
+                
+                loadingStep.innerHTML = 'Loading numpy package...';
+                outputDiv.innerHTML = '✓ Python loaded\nLoading numpy...\n';
+                
+                await pyodide.loadPackage('numpy');
+                outputDiv.innerHTML += '✓ numpy loaded\nLoading matplotlib...\n';
+                
+                loadingStep.innerHTML = 'Loading matplotlib package...';
+                await pyodide.loadPackage('matplotlib');
+                outputDiv.innerHTML += '✓ matplotlib loaded\nConfiguring environment...\n';
+                
+                // Configure Python environment
+                pyodide.runPython(`
+                    import sys
+                    import numpy as np
+                    import matplotlib
+                    matplotlib.use('Agg')
+                    import matplotlib.pyplot as plt
+                    
+                    import io
+                    sys.stdout_capture = io.StringIO()
+                    
+                    print("=" * 50)
+                    print("✅ Python IDE Ready!")
+                    print(f"NumPy: {np.__version__}")
+                    print(f"Matplotlib: {matplotlib.__version__}")
+                    print("=" * 50)
+                    print("\\nTo generate a plot, run code with:")
+                    print("  plt.savefig(buffer, format='png')")
+                    print("  print(f'PLOT_IMAGE:{base64_string}')")
+                `);
+                
+                const output = pyodide.runPython('sys.stdout_capture.getvalue()');
+                outputDiv.innerHTML += output;
+                
+                statusSpan.innerHTML = 'Ready';
+                isReady = true;
+                loadingDiv.style.display = 'none';
+                
+            } catch (err) {
+                console.error('Load error:', err);
+                loadingStep.innerHTML = `<span class="error">Error: ${err.message}</span>`;
+                
+                if (loadAttempts < 3) {
+                    loadingStep.innerHTML += '<br>Retrying in 2 seconds...';
+                    setTimeout(loadPyodideWithRetry, 2000);
+                } else {
+                    outputDiv.innerHTML = `❌ Failed to load Python after ${loadAttempts} attempts.\n\nError: ${err.message}\n\nPlease check:\n1. Internet connection\n2. Try closing and reopening the app\n3. Ensure no firewall is blocking`;
+                    statusSpan.innerHTML = 'Error';
+                    loadingDiv.innerHTML = `
+                        <div>❌ Failed to load Python</div>
+                        <small>${err.message}</small>
+                        <br><br>
+                        <button onclick="location.reload()">🔄 Reload App</button>
+                        <button onclick="retryLoad()">🔄 Retry Loading</button>
+                    `;
+                }
+            }
+        }
+        
+        function retryLoad() {
+            loadAttempts = 0;
+            loadPyodideWithRetry();
+        }
+        
+        // Run Python code
+        async function runCode() {
+            if (!isReady || !pyodide) {
+                document.getElementById('output').innerHTML = '⚠️ Python is still loading. Please wait...\n\nIf stuck, tap "Reload App" or check internet connection.';
+                return;
+            }
+            
+            const code = editor.getValue();
+            const statusSpan = document.getElementById('status');
+            const outputDiv = document.getElementById('output');
+            
+            statusSpan.innerHTML = 'Running...';
+            
+            try {
+                pyodide.runPython(`
+                    import sys
+                    import io
+                    sys.stdout_capture = io.StringIO()
+                    sys.stderr_capture = io.StringIO()
+                    
+                    class TeeIO:
+                        def __init__(self, capture):
+                            self.capture = capture
+                        def write(self, text):
+                            self.capture.write(text)
+                        def flush(self):
+                            pass
+                    
+                    sys.stdout = TeeIO(sys.stdout_capture)
+                    sys.stderr = TeeIO(sys.stderr_capture)
+                `);
+                
+                await pyodide.runPythonAsync(code);
+                
+                const stdout = pyodide.runPython('sys.stdout_capture.getvalue()');
+                const stderr = pyodide.runPython('sys.stderr_capture.getvalue()');
+                
+                let output = stdout;
+                if (stderr) output += `\n⚠️ ${stderr}`;
+                
+                // Check for plot data
+                const plotMatch = stdout.match(/PLOT_IMAGE:([A-Za-z0-9+/=]+)/);
+                if (plotMatch) {
+                    currentPlotBase64 = plotMatch[1];
+                    document.getElementById('plotImage').src = `data:image/png;base64,${currentPlotBase64}`;
+                    output = output.replace(/PLOT_IMAGE:[A-Za-z0-9+/=]+/, '');
+                    output += '\n\n✅ Graph generated! Click "View Plot" to see it.';
+                }
+                
+                if (!output.trim()) {
+                    output = '✓ Code executed successfully (no output)';
+                }
+                
+                outputDiv.innerHTML = output;
+                statusSpan.innerHTML = 'Ready';
+                
+            } catch (err) {
+                outputDiv.innerHTML = `❌ Python Error:\n${err.message}`;
+                statusSpan.innerHTML = 'Error';
+            }
+        }
+        
+        function clearOutput() {
+            document.getElementById('output').innerHTML = '';
+            currentPlotBase64 = null;
+            closePlotModal();
+        }
+        
+        function showPlotModal() {
+            if (currentPlotBase64) {
+                document.getElementById('plotModal').classList.add('active');
+                resetZoom();
+            } else {
+                document.getElementById('output').innerHTML += '\n\n⚠️ No plot generated yet. Run code that creates a plot first.';
+            }
+        }
+        
+        function closePlotModal() {
+            document.getElementById('plotModal').classList.remove('active');
+            resetZoom();
+        }
+        
+        function zoomIn() {
+            currentZoom = Math.min(currentZoom + 0.25, 3);
+            const img = document.getElementById('plotImage');
+            img.style.transform = `scale(${currentZoom})`;
+        }
+        
+        function zoomOut() {
+            currentZoom = Math.max(currentZoom - 0.25, 0.5);
+            const img = document.getElementById('plotImage');
+            img.style.transform = `scale(${currentZoom})`;
+        }
+        
+        function resetZoom() {
+            currentZoom = 1;
+            const img = document.getElementById('plotImage');
+            img.style.transform = 'scale(1)';
+        }
+        
+        function downloadPlot() {
+            if (currentPlotBase64) {
+                const link = document.createElement('a');
+                link.download = 'python_plot.png';
+                link.href = `data:image/png;base64,${currentPlotBase64}`;
+                link.click();
+            }
+        }
+        
+        function loadExample() {
+            const examples = {
+                'Sine Wave': `import numpy as np
+import matplotlib.pyplot as plt
+import io
+import base64
+
+x = np.linspace(0, 10, 100)
+plt.figure(figsize=(12, 8))
+plt.plot(x, np.sin(x), 'b-', linewidth=2.5)
+plt.xlabel('x')
+plt.ylabel('sin(x)')
+plt.title('Sine Wave')
+plt.grid(True, alpha=0.3)
+
+buffer = io.BytesIO()
+plt.savefig(buffer, format='png', dpi=120, bbox_inches='tight')
+buffer.seek(0)
+image_base64 = base64.b64encode(buffer.read()).decode()
+buffer.close()
+plt.close()
+
+print(f"PLOT_IMAGE:{image_base64}")
+print("Sine wave generated!")`,
+                
+                'Bar Chart': `import matplotlib.pyplot as plt
+import io
+import base64
+
+categories = ['A', 'B', 'C', 'D', 'E']
+values = [23, 45, 56, 78, 32]
+
+plt.figure(figsize=(10, 7))
+plt.bar(categories, values, color='skyblue', edgecolor='navy', linewidth=2)
+plt.xlabel('Categories')
+plt.ylabel('Values')
+plt.title('Bar Chart')
+plt.grid(True, alpha=0.3, axis='y')
+
+buffer = io.BytesIO()
+plt.savefig(buffer, format='png', dpi=120, bbox_inches='tight')
+buffer.seek(0)
+image_base64 = base64.b64encode(buffer.read()).decode()
+buffer.close()
+plt.close()
+
+print(f"PLOT_IMAGE:{image_base64}")
+print(f"Max value: {max(values)}")`
+            };
+            
+            let choice = prompt("Select example:\n1 - Sine Wave\n2 - Bar Chart", "1");
+            if (choice === '1') editor.setValue(examples['Sine Wave']);
+            else if (choice === '2') editor.setValue(examples['Bar Chart']);
+        }
+        
+        // Initialize everything
+        initEditor();
+        setTimeout(loadPyodideWithRetry, 1000);
+    </script>
+</body>
+</html>
