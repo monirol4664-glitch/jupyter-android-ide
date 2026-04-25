@@ -1,4 +1,4 @@
-name: Build Python IDE APK (Simple)
+name: Build Python IDE APK
 on:
   workflow_dispatch:
 
@@ -22,64 +22,120 @@ jobs:
           packages: 'platforms;android-34'
           accept-android-sdk-licenses: true
       
-      - name: Create project
+      - name: Create Android project from scratch
         run: |
+          # Create directory structure
           mkdir -p app/src/main/assets
           mkdir -p app/src/main/java/com/app
           mkdir -p app/src/main/res/values
+          mkdir -p app/src/main/res/drawable
           
+          # Copy your files
           cp index.html app/src/main/assets/
           cp MainActivity.java app/src/main/java/com/app/
           cp AndroidManifest.xml app/src/main/
           
-          cat > app/src/main/res/values/styles.xml << 'EOF'
+          # Create minimal resources
+          cat > app/src/main/res/values/strings.xml << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <resources>
-              <style name="AppTheme" parent="android:Theme.Holo"></style>
+              <string name="app_name">Python IDE</string>
           </resources>
           EOF
           
+          # Create build.gradle (root)
           cat > build.gradle << 'EOF'
           buildscript {
-              repositories { google(); mavenCentral() }
-              dependencies { classpath 'com.android.tools.build:gradle:7.3.1' }
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+              dependencies {
+                  classpath 'com.android.tools.build:gradle:7.4.2'
+              }
           }
-          allprojects { repositories { google(); mavenCentral() } }
+          allprojects {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
           EOF
           
+          # Create build.gradle (app) - MINIMAL VERSION
           cat > app/build.gradle << 'EOF'
           apply plugin: 'com.android.application'
+          
           android {
-              compileSdk 33
+              compileSdk 34
+              
               defaultConfig {
                   applicationId "com.app"
                   minSdk 21
-                  targetSdk 33
+                  targetSdk 34
                   versionCode 1
                   versionName "1.0"
               }
           }
           EOF
           
+          # Create settings.gradle
           echo 'include ":app"' > settings.gradle
+          
+          # Create gradle.properties
+          cat > gradle.properties << 'EOF'
+          org.gradle.jvmargs=-Xmx1536m
+          EOF
       
-      - name: Install gradle
+      - name: Generate gradle wrapper using gradle command
         run: |
-          sudo apt-get update
-          sudo apt-get install -y gradle
+          # Use the gradle command to generate wrapper
+          which gradle || echo "Gradle not found, downloading..."
+          
+          # Download gradle directly
+          wget -q https://services.gradle.org/distributions/gradle-7.5-bin.zip
+          unzip -q gradle-7.5-bin.zip
+          export PATH=$PATH:$(pwd)/gradle-7.5/bin
+          
+          # Generate wrapper
+          gradle-7.5/bin/gradle wrapper
+          
+          # Make gradlew executable
+          chmod +x gradlew
+          
+          # Verify wrapper was created
+          ls -la gradle/wrapper/
+          echo "Wrapper jar size:"
+          ls -la gradle/wrapper/gradle-wrapper.jar || echo "Wrapper jar missing"
       
       - name: Build APK
         run: |
-          gradle clean
-          gradle assembleDebug
+          # Use the generated gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace || {
+            echo "Build failed, trying with debug info..."
+            ./gradlew assembleDebug --info
+          }
+          
+          # Check if APK was created
+          find . -name "*.apk" -type f
           
           if [ -f "app/build/outputs/apk/debug/app-debug.apk" ]; then
-            echo "✅ APK built!"
+            echo "✅ APK built successfully!"
             ls -lh app/build/outputs/apk/debug/
+          elif [ -f "app/build/outputs/apk/app-debug.apk" ]; then
+            echo "✅ APK found in alternate location!"
+            ls -lh app/build/outputs/apk/
+            cp app/build/outputs/apk/app-debug.apk app/build/outputs/apk/debug/
+          else
+            echo "❌ Build failed - no APK found"
+            exit 1
           fi
       
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: Python-IDE
-          path: app/build/outputs/apk/debug/*.apk
+          path: |
+            app/build/outputs/apk/debug/*.apk
+            app/build/outputs/apk/*.apk
+          retention-days: 30
