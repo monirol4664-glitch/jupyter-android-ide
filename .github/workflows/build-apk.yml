@@ -32,12 +32,15 @@ jobs:
           import android.app.Activity;
           import android.os.Bundle;
           import android.webkit.WebView;
+          import android.webkit.WebSettings;
+          
           public class MainActivity extends Activity {
               @Override
               protected void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
                   WebView webView = new WebView(this);
-                  webView.getSettings().setJavaScriptEnabled(true);
+                  WebSettings webSettings = webView.getSettings();
+                  webSettings.setJavaScriptEnabled(true);
                   webView.loadUrl("file:///android_asset/editor.html");
                   setContentView(webView);
               }
@@ -49,7 +52,8 @@ jobs:
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android"
               package="com.app">
-              <application android:label="Python Editor">
+              <uses-permission android:name="android.permission.INTERNET" />
+              <application android:label="Python Editor" android:usesCleartextTraffic="true">
                   <activity android:name=".MainActivity" android:exported="true">
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN"/>
@@ -63,30 +67,59 @@ jobs:
           # Create build.gradle files
           cat > build.gradle << 'EOF'
           buildscript {
-              repositories { google(); mavenCentral() }
-              dependencies { classpath 'com.android.tools.build:gradle:8.1.0' }
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+              dependencies {
+                  classpath 'com.android.tools.build:gradle:8.1.0'
+              }
           }
-          allprojects { repositories { google(); mavenCentral() } }
+          allprojects {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          tasks.register('clean', Delete) {
+              delete rootProject.buildDir
+          }
           EOF
           
           cat > app/build.gradle << 'EOF'
           apply plugin: 'com.android.application'
+          
           android {
               compileSdk 34
+              
               defaultConfig {
+                  applicationId "com.app"
                   minSdk 21
                   targetSdk 34
+                  versionCode 1
+                  versionName "1.0"
+              }
+              
+              buildTypes {
+                  debug {
+                      debuggable true
+                  }
               }
           }
           EOF
           
           echo 'include ":app"' > settings.gradle
           
-          # Build the APK
-          chmod +x gradlew 2>/dev/null || true
-          ./gradlew wrapper --gradle-version 8.0 2>/dev/null || true
+          # Generate gradle wrapper
+          echo "Creating gradle wrapper..."
+          gradle wrapper --gradle-version 8.0
+          
+          # Make gradlew executable
           chmod +x gradlew
-          ./gradlew assembleDebug
+          
+          # Build the APK
+          echo "Building APK..."
+          ./gradlew assembleDebug --no-daemon
       
       - name: Upload APK
         uses: actions/upload-artifact@v4
