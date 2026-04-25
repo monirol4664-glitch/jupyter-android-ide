@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Offline Python Notebook</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { height: 100vh; width: 100vw; overflow: hidden; background: #1e1e1e; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        .container { display: flex; flex-direction: column; height: 100%; }
+        .toolbar { background: #2d2d2d; padding: 8px 12px; display: flex; gap: 8px; flex-wrap: wrap; border-bottom: 1px solid #3e3e3e; }
+        button { background: #0e639c; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+        .run-btn { background: #2ea043; }
+        .run-btn:hover { background: #3fb950; }
+        .clear-btn { background: #da3633; }
+        .clear-btn:hover { background: #f85149; }
+        .status { background: #1e1e1e; color: #89e051; padding: 4px 10px; font-size: 11px; font-family: monospace; border-left: 1px solid #3e3e3e; margin-left: auto; }
+        .split-view { display: flex; flex: 1; overflow: hidden; }
+        .editor-pane { flex: 1; display: flex; flex-direction: column; border-right: 1px solid #3e3e3e; }
+        .output-pane { flex: 1; display: flex; flex-direction: column; background: #1e1e1e; }
+        .pane-header { background: #2d2d2d; padding: 6px 12px; color: #cccccc; font-size: 11px; font-weight: bold; border-bottom: 1px solid #3e3e3e; }
+        #editor-container { flex: 1; min-height: 0; }
+        #output { flex: 1; background: #1e1e1e; color: #d4d4d4; font-family: 'Monaco', 'Menlo', monospace; font-size: 12px; padding: 10px; overflow-y: auto; white-space: pre-wrap; word-wrap: break-word; }
+        @media (max-width: 768px) {
+            .split-view { flex-direction: column; }
+            .editor-pane { flex: 1; border-right: none; border-bottom: 1px solid #3e3e3e; }
+            .output-pane { flex: 0.8; }
+            button { padding: 5px 10px; font-size: 11px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="toolbar">
+            <button class="run-btn" onclick="runCode()">▶ Run Code</button>
+            <button onclick="clearOutput()">🗑 Clear</button>
+            <button onclick="showPackages()">📦 Packages</button>
+            <div class="status" id="status">⚡ Loading Python...</div>
+        </div>
+        <div class="split-view">
+            <div class="editor-pane">
+                <div class="pane-header">📝 Code Editor</div>
+                <div id="editor-container"></div>
+            </div>
+            <div class="output-pane">
+                <div class="pane-header">📤 Output</div>
+                <div id="output">Loading offline Python environment...</div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js"></script>
+    <script>
+        // Initialize Monaco Editor
+        require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs' } });
+        require(['vs/editor/editor.main'], function() {
+            window.editor = monaco.editor.create(document.getElementById('editor-container'), {
+                value: `# Offline Python Notebook
+# All packages are bundled locally!
+# No internet connection required
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+print("Hello from Python!")
+print(f"numpy version: {np.__version__}")
+print(f"matplotlib version: {plt.matplotlib.__version__}")
+
+# Calculate something
+numbers = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+print(f"Mean: {np.mean(numbers)}")
+print(f"Median: {np.median(numbers)}")
+print(f"Std dev: {np.std(numbers):.2f}")
+
+# Your code here:
+`,
+                language: 'python',
+                theme: 'vs-dark',
+                fontSize: 14,
+                automaticLayout: true,
+                lineNumbers: 'on',
+                wordWrap: 'on',
+                suggestOnTriggerCharacters: true,
+                quickSuggestions: true,
+                minimap: { enabled: false }
+            });
+            
+            // Autocomplete
+            monaco.languages.registerCompletionItemProvider('python', {
+                provideCompletionItems: () => ({
+                    suggestions: [
+                        'import', 'from', 'as', 'def', 'class', 'return', 'if', 'elif',
+                        'else', 'for', 'while', 'break', 'print', 'len', 'range', 'np',
+                        'plt', 'numpy', 'matplotlib', 'pandas', 'pd', 'scipy'
+                    ].map(k => ({ label: k, kind: 14, insertText: k, detail: 'Python' }))
+                })
+            });
+        });
+        
+        let pyodide = null;
+        
+        async function loadPyodide() {
+            const output = document.getElementById('output');
+            const status = document.getElementById('status');
+            
+            status.innerHTML = '📦 Loading Python (offline)...';
+            output.innerHTML = 'Loading from local packages...<br>';
+            
+            try {
+                const script = document.createElement('script');
+                script.src = "file:///android_asset/pyodide/pyodide.js";
+                script.onload = async () => {
+                    pyodide = await window.loadPyodide({
+                        indexURL: "file:///android_asset/pyodide/"
+                    });
+                    
+                    output.innerHTML += '✅ Python loaded<br>📦 Loading numpy...<br>';
+                    await pyodide.loadPackage(['numpy', 'matplotlib']);
+                    
+                    const result = pyodide.runPython(`
+                        import numpy as np
+                        import matplotlib
+                        matplotlib.use('Agg')
+                        import matplotlib.pyplot as plt
+                        print(f"✅ numpy {np.__version__}")
+                        print(f"✅ matplotlib {matplotlib.__version__}")
+                        print("\\n✨ Ready to execute code!")
+                    `);
+                    
+                    output.innerHTML = result;
+                    status.innerHTML = '✅ Ready | Offline Mode';
+                };
+                document.head.appendChild(script);
+            } catch (err) {
+                output.innerHTML = `Error: ${err.message}`;
+                status.innerHTML = '❌ Error';
+            }
+        }
+        
+        async function runCode() {
+            if (!pyodide) {
+                document.getElementById('output').innerHTML = '⚠️ Python still loading...';
+                return;
+            }
+            
+            const code = window.editor.getValue();
+            document.getElementById('status').innerHTML = '▶ Running...';
+            
+            try {
+                pyodide.runPython(`
+                    import sys
+                    from io import StringIO
+                    sys.stdout = StringIO()
+                `);
+                
+                await pyodide.runPythonAsync(code);
+                const stdout = pyodide.runPython('sys.stdout.getvalue()');
+                document.getElementById('output').innerHTML = stdout || '✓ Code executed successfully';
+                document.getElementById('status').innerHTML = '✅ Ready';
+            } catch (err) {
+                document.getElementById('output').innerHTML = `Error: ${err.message}`;
+                document.getElementById('status').innerHTML = '❌ Error';
+            }
+        }
+        
+        function clearOutput() {
+            document.getElementById('output').innerHTML = '✨ Output cleared';
+        }
+        
+        function showPackages() {
+            if (pyodide) {
+                const packages = pyodide.runPython(`
+                    import sys
+                    ', '.join([p for p in sys.modules.keys() if not p.startswith('_')][:15])
+                `);
+                document.getElementById('output').innerHTML = `📦 Loaded packages:<br>${packages}`;
+            }
+        }
+        
+        loadPyodide();
+    </script>
+</body>
+</html>
