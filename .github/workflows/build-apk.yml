@@ -10,14 +10,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      # FIX 1: Use Java 11 for Gradle compatibility
       - name: Set up JDK 11
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '11'
       
-      # FIX 2: Use specific Android SDK setup without version conflicts
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         with:
@@ -25,36 +23,67 @@ jobs:
           packages: 'platforms;android-34 build-tools;34.0.0'
           accept-android-sdk-licenses: true
       
-      # FIX 3: Download Pyodide packages
-      - name: Download Pyodide packages
+      - name: Create directory structure
         run: |
           mkdir -p app/src/main/assets/pyodide
+          mkdir -p app/src/main/java/com/app
+      
+      - name: Download Pyodide packages (with retry)
+        run: |
           cd app/src/main/assets
           
-          # Download to local assets
-          wget -q https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js
-          wget -q https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.asm.js
-          wget -q https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.asm.wasm
-          wget -q https://cdn.jsdelivr.net/pyodide/v0.25.0/full/python_stdlib.zip
-          wget -q https://cdn.jsdelivr.net/pyodide/v0.25.0/full/repodata.json
-          wget -q https://cdn.jsdelivr.net/pyodide/v0.25.0/full/numpy.js
-          wget -q https://cdn.jsdelivr.net/pyodide/v0.25.0/full/numpy.data
-          wget -q https://cdn.jsdelivr.net/pyodide/v0.25.0/full/matplotlib.js
-          wget -q https://cdn.jsdelivr.net/pyodide/v0.25.0/full/matplotlib.data
+          # Download with verbose output and retry logic
+          files=(
+            "pyodide.js"
+            "pyodide.asm.js" 
+            "pyodide.asm.wasm"
+            "python_stdlib.zip"
+            "repodata.json"
+            "numpy.js"
+            "numpy.data"
+            "matplotlib.js"
+            "matplotlib.data"
+          )
           
-          cd ../../../..
+          for file in "${files[@]}"; do
+            echo "Downloading: $file"
+            curl -L --retry 3 --retry-delay 2 -o "$file" \
+              "https://cdn.jsdelivr.net/pyodide/v0.25.0/full/$file"
+            
+            if [ -f "$file" ]; then
+              echo "✅ Downloaded: $file ($(du -h $file | cut -f1))"
+            else
+              echo "❌ Failed to download: $file"
+              exit 1
+            fi
+          done
+          
+          cd ../../..
       
-      # FIX 4: Copy source files
       - name: Copy source files
         run: |
+          # Check if files exist
+          if [ ! -f "index.html" ]; then
+            echo "❌ index.html not found!"
+            exit 1
+          fi
+          if [ ! -f "MainActivity.java" ]; then
+            echo "❌ MainActivity.java not found!"
+            exit 1
+          fi
+          if [ ! -f "AndroidManifest.xml" ]; then
+            echo "❌ AndroidManifest.xml not found!"
+            exit 1
+          fi
+          
           cp index.html app/src/main/assets/
           cp MainActivity.java app/src/main/java/com/app/
           cp AndroidManifest.xml app/src/main/
+          
+          echo "✅ Files copied successfully"
       
-      # FIX 5: Gradle files with correct versions
       - name: Create Gradle files
         run: |
-          # Root build.gradle - Compatible with Java 11
           cat > build.gradle << 'EOF'
           buildscript {
               repositories {
@@ -76,7 +105,6 @@ jobs:
           }
           EOF
           
-          # App build.gradle
           cat > app/build.gradle << 'EOF'
           apply plugin: 'com.android.application'
           
@@ -98,23 +126,18 @@ jobs:
           }
           EOF
           
-          # Settings.gradle
           echo 'include ":app"' > settings.gradle
           
-          # Gradle properties
           cat > gradle.properties << 'EOF'
           org.gradle.jvmargs=-Xmx1536m
           android.useAndroidX=true
           android.enableJetifier=true
           EOF
       
-      # FIX 6: Setup Gradle wrapper properly
       - name: Setup Gradle Wrapper
         run: |
-          # Create wrapper directory
           mkdir -p gradle/wrapper
           
-          # Create properties file
           cat > gradle/wrapper/gradle-wrapper.properties << 'EOF'
           distributionBase=GRADLE_USER_HOME
           distributionPath=wrapper/dists
@@ -123,32 +146,23 @@ jobs:
           zipStorePath=wrapper/dists
           EOF
           
-          # Download gradle-wrapper.jar
-          curl -s -L -o gradle/wrapper/gradle-wrapper.jar \
+          curl -L -o gradle/wrapper/gradle-wrapper.jar \
             https://raw.githubusercontent.com/gradle/gradle/v7.5.0/gradle/wrapper/gradle-wrapper.jar
           
-          # Create gradlew script
           cat > gradlew << 'EOF'
           #!/bin/sh
           APP_HOME=$(cd "$(dirname "$0")"; pwd)
-          DEFAULT_JVM_OPTS=""
           CLASSPATH=$APP_HOME/gradle/wrapper/gradle-wrapper.jar
-          exec java $DEFAULT_JVM_OPTS -cp $CLASSPATH org.gradle.wrapper.GradleWrapperMain "$@"
+          exec java -cp $CLASSPATH org.gradle.wrapper.GradleWrapperMain "$@"
           EOF
           
-          # Make executable
           chmod +x gradlew
       
-      # FIX 7: Build APK with retry logic
       - name: Build APK
         run: |
-          # Clean first
           ./gradlew clean --no-daemon
-          
-          # Build debug APK
           ./gradlew assembleDebug --no-daemon --stacktrace
           
-          # Verify APK was created
           if [ -f "app/build/outputs/apk/debug/app-debug.apk" ]; then
             echo "✅ APK built successfully!"
             ls -lh app/build/outputs/apk/debug/
