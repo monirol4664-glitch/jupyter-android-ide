@@ -6,19 +6,19 @@
     <title>Python IDE</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { height: 100vh; width: 100vw; overflow: hidden; background: #1e1e1e; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        body { height: 100vh; width: 100vw; overflow: hidden; background: #1e1e1e; }
         .toolbar { background: #2d2d2d; padding: 10px; display: flex; gap: 10px; border-bottom: 1px solid #3e3e3e; }
-        button { background: #0e639c; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px; }
+        button { background: #0e639c; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
         .run { background: #2ea043; }
         .clear { background: #da3633; }
-        .status { background: #1e1e1e; color: #89e051; padding: 8px 12px; font-family: monospace; font-size: 12px; margin-left: auto; border-radius: 4px; }
+        .status { background: #1e1e1e; color: #89e051; padding: 8px 12px; font-family: monospace; margin-left: auto; }
         .split { display: flex; flex: 1; height: calc(100vh - 50px); }
         .editor-pane { flex: 1; display: flex; flex-direction: column; border-right: 1px solid #3e3e3e; }
         .output-pane { flex: 1; display: flex; flex-direction: column; }
         .pane-header { background: #2d2d2d; padding: 8px 12px; color: #ccc; font-size: 12px; font-weight: bold; border-bottom: 1px solid #3e3e3e; }
         #editor { flex: 1; }
-        #output { flex: 1; background: #1e1e1e; color: #d4d4d4; font-family: 'Monaco', monospace; font-size: 13px; padding: 15px; overflow-y: auto; white-space: pre-wrap; line-height: 1.4; }
-        .loading { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.95); color: #89e051; padding: 30px; border-radius: 10px; text-align: center; z-index: 1000; border: 1px solid #3e3e3e; }
+        #output { flex: 1; background: #1e1e1e; color: #d4d4d4; font-family: monospace; font-size: 13px; padding: 15px; overflow-y: auto; white-space: pre-wrap; }
+        .loading { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.95); color: #89e051; padding: 30px; border-radius: 10px; text-align: center; z-index: 1000; }
         @media (max-width: 768px) { .split { flex-direction: column; } .editor-pane { border-right: none; border-bottom: 1px solid #3e3e3e; } }
     </style>
 </head>
@@ -26,7 +26,7 @@
     <div class="toolbar">
         <button class="run" onclick="runCode()">▶ Run</button>
         <button class="clear" onclick="clearOutput()">Clear</button>
-        <div class="status" id="status">Loading Python...</div>
+        <div class="status" id="status">Loading...</div>
     </div>
     <div class="split">
         <div class="editor-pane">
@@ -38,37 +38,27 @@
             <div id="output"></div>
         </div>
     </div>
-    
-    <div class="loading" id="loading">🐍 Loading Python & Packages...<br><small>First time: ~15 seconds</small></div>
+    <div class="loading" id="loading">🐍 Loading Python...<br><small>First time: ~10-15 sec</small></div>
 
     <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js"></script>
     <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
-    
     <script>
         let editor, pyodide, ready = false;
         
-        // Initialize Monaco
         require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs' } });
         require(['vs/editor/editor.main'], function() {
             editor = monaco.editor.create(document.getElementById('editor'), {
                 value: `# Python IDE with numpy & matplotlib
 import numpy as np
-import matplotlib.pyplot as plt
 
 print("Hello from Python!")
 print(f"NumPy version: {np.__version__}")
 
 # Array operations
 arr = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
-print(f"\\nArray: {arr}")
 print(f"Mean: {np.mean(arr)}")
-print(f"Median: {np.median(arr)}")
 print(f"Sum: {np.sum(arr)}")
 print(f"Std Dev: {np.std(arr):.2f}")
-
-# List comprehension
-squares = [x**2 for x in range(1, 11)]
-print(f"\\nSquares: {squares}")
 
 # Your code here:
 `,
@@ -83,36 +73,18 @@ print(f"\\nSquares: {squares}")
                 minimap: { enabled: false }
             });
             
-            // Autocomplete
             monaco.languages.registerCompletionItemProvider('python', {
                 provideCompletionItems: () => ({
-                    suggestions: [
-                        'import', 'from', 'as', 'def', 'class', 'return', 'if', 'elif',
-                        'else', 'for', 'while', 'break', 'continue', 'try', 'except',
-                        'print', 'len', 'range', 'np', 'plt', 'numpy', 'matplotlib'
-                    ].map(k => ({ label: k, kind: 14, insertText: k, detail: 'Python' }))
+                    suggestions: ['import', 'def', 'class', 'if', 'else', 'for', 'while', 'print', 'np', 'numpy'].map(k => ({ label: k, kind: 14, insertText: k }))
                 })
             });
         });
         
-        // Initialize Pyodide
         async function init() {
             try {
-                document.getElementById('output').innerHTML = 'Loading Python runtime...\n';
-                
-                pyodide = await loadPyodide({
-                    indexURL: "https://cdn.jsdelivr.net/pyodide/v0.25.0/full/"
-                });
-                
-                document.getElementById('output').innerHTML += '✓ Python loaded\nLoading numpy...\n';
-                document.getElementById('status').innerHTML = 'Loading numpy...';
-                
+                pyodide = await loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.25.0/full/" });
                 await pyodide.loadPackage('numpy');
-                document.getElementById('output').innerHTML += '✓ numpy loaded\nLoading matplotlib...\n';
-                document.getElementById('status').innerHTML = 'Loading matplotlib...';
-                
                 await pyodide.loadPackage('matplotlib');
-                
                 pyodide.runPython(`
                     import matplotlib
                     matplotlib.use('Agg')
@@ -121,50 +93,26 @@ print(f"\\nSquares: {squares}")
                     sys.stdout = StringIO()
                     print("✅ Ready!")
                     print(f"NumPy: {np.__version__}")
-                    import matplotlib
-                    print(f"Matplotlib: {matplotlib.__version__}")
                 `);
-                
-                const output = pyodide.runPython('sys.stdout.getvalue()');
-                document.getElementById('output').innerHTML = output;
+                document.getElementById('output').innerHTML = pyodide.runPython('sys.stdout.getvalue()');
                 document.getElementById('status').innerHTML = '✅ Ready';
                 document.getElementById('loading').style.display = 'none';
                 ready = true;
-                
             } catch(err) {
                 document.getElementById('output').innerHTML = `Error: ${err.message}`;
-                document.getElementById('status').innerHTML = '❌ Error';
-                document.getElementById('loading').innerHTML = `Error: ${err.message}<br>Check internet connection`;
+                document.getElementById('loading').innerHTML = `Error: ${err.message}`;
             }
         }
         
         async function runCode() {
-            if (!ready) {
-                document.getElementById('output').innerHTML = '⚠️ Still loading, please wait...';
-                return;
-            }
-            
+            if (!ready) { document.getElementById('output').innerHTML = 'Loading...'; return; }
             const code = editor.getValue();
             document.getElementById('status').innerHTML = 'Running...';
-            
             try {
-                pyodide.runPython(`
-                    import sys
-                    from io import StringIO
-                    sys.stdout = StringIO()
-                    sys.stderr = StringIO()
-                `);
-                
+                pyodide.runPython(`import sys; from io import StringIO; sys.stdout = StringIO()`);
                 await pyodide.runPythonAsync(code);
-                
-                const stdout = pyodide.runPython('sys.stdout.getvalue()');
-                const stderr = pyodide.runPython('sys.stderr.getvalue()');
-                
-                let output = stdout;
-                if (stderr) output += `\n⚠️ ${stderr}`;
-                if (!output.trim()) output = '✓ Code executed successfully';
-                
-                document.getElementById('output').innerHTML = output;
+                const out = pyodide.runPython('sys.stdout.getvalue()');
+                document.getElementById('output').innerHTML = out || '✓ Done';
                 document.getElementById('status').innerHTML = '✅ Ready';
             } catch(err) {
                 document.getElementById('output').innerHTML = `❌ Error:\n${err.message}`;
@@ -172,10 +120,7 @@ print(f"\\nSquares: {squares}")
             }
         }
         
-        function clearOutput() {
-            document.getElementById('output').innerHTML = '';
-        }
-        
+        function clearOutput() { document.getElementById('output').innerHTML = ''; }
         init();
     </script>
 </body>
